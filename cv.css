@@ -1,0 +1,94 @@
+.page {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.split {
+  height: 100vh;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  overflow-x: hidden;
+  padding-top: 20px;
+}
+
+.left {
+  left: 0;
+  width: 20%;
+  background-color: rgba(37, 56, 79, 1);
+  color: aliceblue;
+  font-size: 1vw;
+}
+
+.right {
+  right: 0;
+  width: 80%;
+  background-color: rgba(22, 36, 55, 0.3);
+  overflow: scroll;
+}
+
+.centered {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.centeredR {
+  top: 6%;
+  left: 50%;
+  text-align: center;
+  overflow: scroll;
+}
+
+.flexParent {
+  /* display: flex; */
+  /* flex-wrap: wrap; */
+}
+
+.flexChild {
+  
+}
+
+.text2 {
+  font-size: 3vw;
+}
+
+.text3 {
+  font-size: 1.25vw;
+}
+
+.format1 {
+  margin-top: 50px;
+}
+
+.centered img {
+  width: 14vw;
+  border-radius: 50%;
+}
+
+.box {
+  border-left: solid 5px rgba(37, 56, 79, 1);
+  background-color: rgba(22, 36, 55, 0.3);;
+  margin: 20px;
+  padding: 20px;
+  text-align: left;
+  min-width: 400px;
+}
+
+.box2 {
+  margin-bottom: 40px;
+}
+
+.box p {
+  margin-left: 10px;
+}
+
+.box ul {
+  margin-left: 10px;
+}
+
+.box h3 {
+  margin-left: 10px;
+}
