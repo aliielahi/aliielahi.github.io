@@ -1,0 +1,18 @@
+
+#abstract {
+    display: none; /* Initially hide the abstract */
+ }
+ #abstract2 {
+    display: none; /* Initially hide the abstract */
+ }
+ #abstract1 {
+    display: none; /* Initially hide the abstract */
+ }
+
+.mb0A {
+	margin-bottom: 0px;
+}
+
+hr {
+	margin-top: 2px;
+}

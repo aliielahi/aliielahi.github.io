@@ -7,8 +7,10 @@
 <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto'>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="./style.css">
+
 <style>
-html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif}
+html,body,h1,h2,h3,h4,h5,h6 {font-family: "Verdana", sans-serif}
 </style>
 </head>
 <body class="w3-light-grey">
@@ -37,13 +39,13 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif}
           <!-- <p><i class="fa fa-phone fa-fw w3-margin-right w3-large w3-text-teal"></i>1224435534</p> -->
           <hr>
 
-          <p class="w3-large"><b><i class="fa fa-asterisk fa-fw w3-margin-right w3-text-teal"></i><a href = "./index.html">About Me</a></b></p>
+          <p class=""><i class="fa fa-asterisk fa-fw w3-margin-right w3-text-teal"></i><a href = "./index.html">About Me</a></p>
 
-          <p class="w3-large"><b><i class="fa fa-asterisk fa-fw w3-margin-right w3-text-teal"></i><a href = "./exp.html">Work Experience and Academic Projects</a></b></p>
+          <p class=""><i class="fa fa-asterisk fa-fw w3-margin-right w3-text-teal"></i><a href = "./publications.html">Publications</a></p>
 
-          <p class="w3-large"><b><i class="fa fa-asterisk fa-fw w3-margin-right w3-text-teal"></i><a href = "./publications.html">Papers/Publications</a></b></p>
+          <p class=""><i class="fa fa-asterisk fa-fw w3-margin-right w3-text-teal"></i><a href = "./exp.html">Work Experience / Code Reps</a></p>          
           
-          <p class="w3-large"><b><i class="fa fa-asterisk fa-fw w3-margin-right w3-text-teal"></i><a href = "./AliElahi.pdf" download = "AliElahiCV">Curriculum Vitae</a></b></p>
+          <p class=""><i class="fa fa-asterisk fa-fw w3-margin-right w3-text-teal"></i><a href = "./AliElahi.pdf" download = "AliElahiCV">Curriculum Vitae</a></p>
           
           
           <br>
@@ -61,23 +63,31 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif}
           <!-- <i class="fa fa-suitcase fa-fw w3-margin-right w3-xxlarge w3-text-teal"></i> -->
         Publications</h2>
         <div class="w3-container">
-          <h5 class="w3-opacity"><b>Leveraging Readily Available Web Data to Predict Surface
-          Water Bacteria Levels Using Domain Adaptation</b><a href = "./ONRpaper.pdf" download = "Domain-Adaptation">[Download]</a></h5>
-          <h6 class="w3-text-teal"><i class="fa fa-calendar fa-fw w3-margin-right"></i><span class="w3-tag w3-teal w3-round">Submitted (The Web Conference)</span></h6>
-          <p >Abstract: <br>
-            Surface water contaminated by fecal bacteria can cause diarrheal illness, threatening human health (especially among children). In this paper, we introduce a water quality dataset collected from beaches in Chicago, USA, and present strong ML baselines to predict historical FIB levels on this dataset. Specifically, we use Random Forest (RF), extreme gradient boosting (XGBoost), and attentive interpretable tabular learning (TabNet) models to establish strong baselines in supervised learning and transfer learning settings on our Chicago beaches dataset. We further show that applying supervised and unsupervised domain adaptation methods enhances transfer learning performance in general. Specifically, our results show that the supervised methods, especially RF, are very promising and that domain adaptation could be successfully employed to model FIB levels in settings where FIB levels are rarely measured.
+          <h5 class="w3-opacity">Elahi, A., Caragea, C., Caragea D. (2024 - Under Preparation) Co-Training as a Domain Adaptation Algorithm for water Quality Prediction in Data-Scarce Locations 
+            <!-- <a href = "./ONRpaper.pdf" download = "Domain-Adaptation">[Download]</a></h5> -->
+
+          <!-- <p id="abstractToggle" class="mb0A">Abstract: <a href="#">[Show]</a></p><br>
+          <p  id="abstract">
+            We use Random Forest (RF), extreme gradient boosting (XGBoost), and attentive interpretable tabular learning (TabNet) models to establish strong baselines in supervised learning and transfer learning settings on our Chicago beaches water quality dataset. We further show that applying supervised and unsupervised domain adaptation methods enhances transfer learning performance. Specifically, our results show that the supervised methods, especially RF, are very promising and that domain adaptation such as Feature Augmentation and Ballance Weighting could be successfully employed to model FIB levels in settings where FIB levels are rarely measured.
+          </p> -->
+        </div>
+        <hr>
+        <div class="w3-container">
+          <h5 class="w3-opacity">Elahi, A., Shumway, D., Caragea, C., Caragea D., Dorevitch S., (2024 - Under Review) Leveraging Readily Available Web Data to Predict Surface
+          Water Bacteria Levels Using Domain Adaptation <a href = "./ONRpaper.pdf" download = "Domain-Adaptation">[Download]</a></h5>
+
+          <p id="abstractToggle1" class="mb0A">Abstract: <a href="#">[Show]</a></p><br>
+          <p  id="abstract1">
+            We use Random Forest (RF), extreme gradient boosting (XGBoost), and attentive interpretable tabular learning (TabNet) models to establish strong baselines in supervised learning and transfer learning settings on our Chicago beaches water quality dataset. We further show that applying supervised and unsupervised domain adaptation methods enhances transfer learning performance. Specifically, our results show that the supervised methods, especially RF, are very promising and that domain adaptation such as Feature Augmentation and Ballance Weighting could be successfully employed to model FIB levels in settings where FIB levels are rarely measured.
           </p>
           <hr>
         </div>
         <div class="w3-container">
-          <h5 class="w3-opacity"><b>A Comparative Study of Recommendation Algorithms: Online and Offline Evaluations on a Large-scale Recommender System</b>
+          <h5 class="w3-opacity">Elahi, A., Zirak, A. (2021). A Comparative Study of Recommendation Algorithms: Online and Offline Evaluations on a Large-scale Recommender System
             <a href = "./YektanetPaper.pdf" download = "recommender-systems">[Download]</a></h5>
-          <h6 class="w3-text-teal"><i class="fa fa-calendar fa-fw w3-margin-right"></i>2021</h6>
-          <p>
-            Abstract: <br>
-            Recommender Systems are one of the most common Artificial Intelligence applications used to aid users in finding relevant items efficiently. A recommender system's performance, in a practical view, is coupled with the satisfaction of users and providers. Satisfaction, however, is not easily transformable into a mathematical optimization problem and thus, not represented by offline metrics such as accuracy and diversity. Although most state-of-the-art studies assess their accuracy with offline tests and metrics, many scholars have claimed that in today's marketplace, online tests such as A/B testing are more suitable in this regard. <br>
-            On the other hand, most recent studies only emphasize the utilization of recommender systems in circumstantial environments, discerning them from the wide-reaching nature of the present study. We have employed a variety of algorithms on different types of datasets divergent in size and subject, producing recommendations in various platforms, including media streaming services, digital publishing websites, e-commerce systems, and news broadcasting networks. <br> <a href = "./YektanetPaper.pdf" download = "recommender-systems">Download to read the rest</a>
-          </p>
+          <p id="abstractToggle2" class="mb0A">Abstract: <a href="#">[Show]</a></p><br>
+          <p  id="abstract2">
+            This study examines a large-scale recommender system operating on approximately 100 websites, handling around 300 requests per second over the previous year. This system demonstrates user-based and item-based recommendations employing algorithms structured upon content-based (CB), collaborative filtering (CF), trend-based, and hybridization of those. Our methods of evaluation include offline tests including accuracy and ranking metrics like hit-rate@k and nDCG, and online tests consisting of click-through rate (CTR) and page per session (PPS).  Additionally, the study addresses challenges like popularity bias and cold start issues, detailing the strategies employed to mitigate these problems.</p>
         </div>
       </div>
 
@@ -96,6 +106,58 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif}
   <a href="https://www.linkedin.com/in/alielahi99/" target="_blank"><i class="fa fa-linkedin w3-hover-opacity"></i></a>
   <p>________ <a href="https://www.w3schools.com/w3css/default.asp" target="_blank"></a></p>
 </footer>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const abstractToggle = document.getElementById('abstractToggle');
+  const abstract = document.getElementById('abstract');
+
+  abstractToggle.addEventListener('click', function(e) {
+    e.preventDefault(); // Prevent default link behavior
+
+    if (abstract.style.display === 'none') {
+      abstract.style.display = 'block';
+      abstractToggle.querySelector('a').textContent = '[Hide]';
+    } else {
+      abstract.style.display = 'none';
+      abstractToggle.querySelector('a').textContent = '[Show]';
+    }
+  });
+});
+document.addEventListener('DOMContentLoaded', function() {
+  const abstractToggle = document.getElementById('abstractToggle1');
+  const abstract = document.getElementById('abstract1');
+
+  abstractToggle.addEventListener('click', function(e) {
+    e.preventDefault(); // Prevent default link behavior
+
+    if (abstract.style.display === 'none') {
+      abstract.style.display = 'block';
+      abstractToggle.querySelector('a').textContent = '[Hide]';
+    } else {
+      abstract.style.display = 'none';
+      abstractToggle.querySelector('a').textContent = '[Show]';
+    }
+  });
+});
+document.addEventListener('DOMContentLoaded', function() {
+  const abstractToggle = document.getElementById('abstractToggle2');
+  const abstract = document.getElementById('abstract2');
+
+  abstractToggle.addEventListener('click', function(e) {
+    e.preventDefault(); // Prevent default link behavior
+
+    if (abstract.style.display === 'none') {
+      abstract.style.display = 'block';
+      abstractToggle.querySelector('a').textContent = '[Hide]';
+    } else {
+      abstract.style.display = 'none';
+      abstractToggle.querySelector('a').textContent = '[Show]';
+    }
+  });
+});
+</script>
 
 </body>
 </html>
