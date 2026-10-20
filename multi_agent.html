@@ -1,0 +1,1569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traces Expose the Shared Evidence That Votes Overcount</title>
+<meta name="description" content="Research report: calibrated correctness confidence for multi-agent LLM systems from all agents&#x27; reasoning traces, prior work, theory and ICML-ready directions.">
+<style>
+:root{
+  --bg:#fbfaf7;--fg:#1f2328;--muted:#5b6470;--link:#0b5cad;--link-visited:#5a3e9e;
+  --border:#d9d4ca;--th-bg:#efebe3;--stripe:#f5f2ec;--code-bg:#f0ede6;--toc-bg:#f4f1ea;
+  --accent:#8a5a00;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a;--fg:#e6e2da;--muted:#a4abb4;--link:#86b9ff;--link-visited:#c3a6ff;
+    --border:#353a41;--th-bg:#23272d;--stripe:#1b1e22;--code-bg:#22262b;--toc-bg:#1b1e22;
+    --accent:#e0b35a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a;--fg:#e6e2da;--muted:#a4abb4;--link:#86b9ff;--link-visited:#c3a6ff;
+  --border:#353a41;--th-bg:#23272d;--stripe:#1b1e22;--code-bg:#22262b;--toc-bg:#1b1e22;
+  --accent:#e0b35a;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Source Serif Pro",serif;
+  font-size:1.0625rem;line-height:1.72;overflow-x:hidden}
+.page{max-width:46rem;margin:0 auto;padding:1.5rem 16px 4rem}
+header.top h1{font-size:2rem;line-height:1.25;margin:1rem 0 .5rem;letter-spacing:-.01em}
+header.top .meta{color:var(--muted);font-size:.95rem;margin-bottom:1.25rem}
+nav.toc{background:var(--toc-bg);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin:1rem 0 2rem;font-size:.95rem;line-height:1.5}
+nav.toc summary{cursor:pointer;font-weight:600;color:var(--fg)}
+nav.toc ul{list-style:none;padding-left:0;margin:.5rem 0}
+nav.toc ul ul{padding-left:1rem;margin:.15rem 0 .35rem}
+nav.toc li{margin:.2rem 0}
+nav.toc a{color:var(--fg);text-decoration:none}
+nav.toc a:hover{color:var(--link);text-decoration:underline}
+h2{font-size:1.5rem;line-height:1.3;margin:2.6rem 0 .8rem;padding-top:1.2rem;border-top:1px solid var(--border)}
+h3{font-size:1.18rem;line-height:1.35;margin:1.9rem 0 .6rem}
+p{margin:0 0 1.05rem}
+main p,main li{overflow-wrap:break-word}
+ul,ol{margin:0 0 1.1rem;padding-left:1.4rem}
+li{margin:.3rem 0}
+strong{font-weight:700}
+a{color:var(--link);text-underline-offset:2px}
+a:visited{color:var(--link-visited)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:var(--code-bg);padding:.1em .3em;border-radius:4px}
+.table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:1.2rem 0 1.6rem;border:1px solid var(--border);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:.86rem;line-height:1.45;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+th,td{padding:.5rem .65rem;border-bottom:1px solid var(--border);vertical-align:top;text-align:left;min-width:7rem}
+th{background:var(--th-bg);font-weight:600;position:sticky;top:0}
+tbody tr:nth-child(even) td{background:var(--stripe)}
+tbody tr:last-child td{border-bottom:none}
+.math-display{overflow-x:auto;overflow-y:hidden;max-width:100%;margin:.9rem 0 1.2rem;padding:.2rem 0}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden;max-width:100%}
+#references ~ ul li, h2#references ~ * li{overflow-wrap:anywhere}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}
+@media (min-width:1280px){
+  .layout{display:grid;grid-template-columns:17rem minmax(0,46rem);gap:2.5rem;justify-content:center;padding:0 16px}
+  .layout .page{margin:0;padding-left:0;padding-right:0}
+  nav.toc{position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow-y:auto;margin-top:2.5rem}
+  .toc-top{display:none}
+}
+@media (max-width:1279px){ .toc-side{display:none} }
+@media (max-width:480px){ header.top h1{font-size:1.6rem} body{font-size:1rem} }
+</style>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+</head>
+<body>
+<div class="layout">
+<nav class="toc toc-side" aria-label="Table of contents"><details open><summary>Contents</summary><div class="toc">
+<ul>
+<li><a href="#1-group-confidence-is-a-single-posterior-and-pooling-compresses-the-evidence-before-estimating-it">1. Group confidence is a single posterior, and pooling compresses the evidence before estimating it</a></li>
+<li><a href="#2-a-single-trace-carries-real-correctness-signal-but-in-units-that-do-not-transfer-across-models">2. A single trace carries real correctness signal, but in units that do not transfer across models</a><ul>
+<li><a href="#sampling-based-semantic-measures-collapse-to-vote-entropy-on-answer-extractable-tasks">Sampling-based semantic measures collapse to vote entropy on answer-extractable tasks</a></li>
+<li><a href="#token-statistics-work-best-as-local-minima-and-tail-windows">Token statistics work best as local minima and tail windows</a></li>
+<li><a href="#answer-stability-is-the-most-portable-trace-signal">Answer stability is the most portable trace signal</a></li>
+<li><a href="#length-revisions-and-hedges-are-real-but-confounded-with-difficulty-and-style">Length, revisions and hedges are real but confounded with difficulty and style</a></li>
+<li><a href="#hidden-state-probes-show-how-much-the-text-leaves-on-the-table">Hidden-state probes show how much the text leaves on the table</a></li>
+<li><a href="#why-these-signals-do-not-pool-directly">Why these signals do not pool directly</a></li>
+</ul>
+</li>
+<li><a href="#3-multi-model-methods-either-stop-at-final-answers-or-report-only-accuracy">3. Multi-model methods either stop at final answers or report only accuracy</a><ul>
+<li><a href="#confidence-aware-debate-compresses-every-turn-to-one-scalar">Confidence-aware debate compresses every turn to one scalar</a></li>
+<li><a href="#debate-dynamics-erase-the-discrimination-that-consistency-carried">Debate dynamics erase the discrimination that consistency carried</a></li>
+<li><a href="#cross-model-entropy-decompositions-work-on-answers-not-steps">Cross-model entropy decompositions work on answers, not steps</a></li>
+<li><a href="#correlated-errors-cap-what-agreement-can-certify">Correlated errors cap what agreement can certify</a></li>
+<li><a href="#the-closest-competitors-and-where-each-one-stops">The closest competitors, and where each one stops</a></li>
+</ul>
+</li>
+<li><a href="#4-reasoning-graphs-add-a-few-points-and-only-when-support-is-counted-by-independent-routes">4. Reasoning graphs add a few points, and only when support is counted by independent routes</a><ul>
+<li><a href="#three-ways-to-build-the-graph-with-very-different-costs">Three ways to build the graph, with very different costs</a></li>
+<li><a href="#degree-centrality-is-self-consistency-and-the-measured-gains-above-it-are-modest">Degree centrality is self-consistency, and the measured gains above it are modest</a></li>
+<li><a href="#the-shape-of-a-single-trace-is-weak-evidence-for-one-question">The shape of a single trace is weak evidence for one question</a></li>
+<li><a href="#argumentation-semantics-give-a-monotone-graph-to-confidence-map-that-nobody-has-calibrated">Argumentation semantics give a monotone graph-to-confidence map that nobody has calibrated</a></li>
+<li><a href="#constraint-inference-and-conformal-filtering-are-ready-made-add-ons">Constraint inference and conformal filtering are ready-made add-ons</a></li>
+</ul>
+</li>
+<li><a href="#5-under-binary-rewards-a-value-function-is-a-correctness-probability-but-for-a-different-object">5. Under binary rewards a value function is a correctness probability, but for a different object</a><ul>
+<li><a href="#orms-prms-and-the-three-probabilities-they-estimate">ORMs, PRMs and the three probabilities they estimate</a></li>
+<li><a href="#value-functions-advantages-and-critics">Value functions, advantages and critics</a></li>
+<li><a href="#group-baselines-are-monte-carlo-estimates-of-the-value">Group baselines are Monte Carlo estimates of the value</a></li>
+<li><a href="#label-free-rl-rewards-are-confidences-without-labels-a-derivation">Label-free RL rewards are confidences without labels (a derivation)</a></li>
+<li><a href="#where-the-analogy-between-value-and-confidence-breaks">Where the analogy between value and confidence breaks</a></li>
+<li><a href="#verifiers-versus-voting-at-matched-compute">Verifiers versus voting at matched compute</a></li>
+</ul>
+</li>
+<li><a href="#6-a-small-group-verifier-needs-only-cross-entropy-and-rl-only-once-it-writes-its-own-analysis">6. A small group verifier needs only cross-entropy, and RL only once it writes its own analysis</a><ul>
+<li><a href="#differentiable-objectives-cover-every-case-where-the-confidence-is-read-off-a-fixed-position">Differentiable objectives cover every case where the confidence is read off a fixed position</a></li>
+<li><a href="#rl-is-needed-when-the-verifier-must-learn-the-analysis-it-writes-before-the-confidence">RL is needed when the verifier must learn the analysis it writes before the confidence</a></li>
+<li><a href="#a-raoblackwellized-hybrid-estimator-a-derivation">A Rao–Blackwellized hybrid estimator (a derivation)</a></li>
+<li><a href="#what-the-evidence-says-about-sft-versus-rl">What the evidence says about SFT versus RL</a></li>
+<li><a href="#existing-trained-aggregators-output-answers-not-group-confidences">Existing trained aggregators output answers, not group confidences</a></li>
+</ul>
+</li>
+<li><a href="#7-pooling-theory-already-says-shared-evidence-counts-once-five-candidate-theorems-make-that-trace-specific">7. Pooling theory already says shared evidence counts once; five candidate theorems make that trace-specific</a><ul>
+<li><a href="#exact-bayesian-pooling-deflates-shared-evidence">Exact Bayesian pooling deflates shared evidence</a></li>
+<li><a href="#without-structural-information-no-aggregator-has-a-useful-guarantee">Without structural information, no aggregator has a useful guarantee</a></li>
+<li><a href="#dependent-juries-have-ceilings">Dependent juries have ceilings</a></li>
+<li><a href="#debate-theory-martingales-without-asymmetry-amplification-with-it">Debate theory: martingales without asymmetry, amplification with it</a></li>
+<li><a href="#guarantees-that-survive-arbitrary-within-question-dependence">Guarantees that survive arbitrary within-question dependence</a></li>
+<li><a href="#five-candidate-theorems-proposals-from-the-research-notes-not-literature">Five candidate theorems (proposals from the research notes, not literature)</a></li>
+<li><a href="#four-further-derivations-used-in-this-report-two-from-the-notes-two-new">Four further derivations used in this report (two from the notes, two new)</a></li>
+</ul>
+</li>
+<li><a href="#8-five-research-directions-compared-on-theory-cost-and-risk">8. Five research directions, compared on theory, cost and risk</a><ul>
+<li><a href="#a-dependence-aware-cross-model-reasoning-graph-confidence">(a) Dependence-aware cross-model reasoning-graph confidence</a></li>
+<li><a href="#b-argumentation-graph-confidence-with-a-calibration-evaluation">(b) Argumentation-graph confidence with a calibration evaluation</a></li>
+<li><a href="#c-a-small-trained-group-verifier-with-an-rl-variant-and-content-ablations">(c) A small trained group verifier, with an RL variant and content ablations</a></li>
+<li><a href="#d-the-bridge-the-graph-confidence-as-a-label-free-reward">(d) The bridge: the graph confidence as a label-free reward</a></li>
+<li><a href="#e-debate-recovering-discrimination-from-switching-evidence">(e) Debate: recovering discrimination from switching evidence</a></li>
+</ul>
+</li>
+<li><a href="#9-recommendation-build-the-dependence-aware-graph-confidence-and-test-it-against-a-trained-reader">9. Recommendation: build the dependence-aware graph confidence and test it against a trained reader</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#references">References</a><ul>
+<li><a href="#closest-competitors-and-multi-model-confidence">Closest competitors and multi-model confidence</a></li>
+<li><a href="#debate-conformity-and-correlated-errors">Debate, conformity and correlated errors</a></li>
+<li><a href="#latent-truth-and-weak-supervision-aggregators-baselines-only">Latent-truth and weak-supervision aggregators (baselines only)</a></li>
+<li><a href="#single-trace-and-sampling-based-confidence">Single-trace and sampling-based confidence</a></li>
+<li><a href="#reasoning-graphs-topology-and-argumentation">Reasoning graphs, topology and argumentation</a></li>
+<li><a href="#reward-models-verifiers-value-estimation-and-label-free-rl">Reward models, verifiers, value estimation and label-free RL</a></li>
+<li><a href="#training-calibrated-confidence-and-trained-aggregators">Training calibrated confidence and trained aggregators</a></li>
+<li><a href="#pooling-aggregation-evaluation-and-guarantees">Pooling, aggregation, evaluation and guarantees</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</details></nav>
+<div class="page">
+<header class="top" id="top">
+<h1>Traces Expose the Shared Evidence That Votes Overcount</h1>
+<div class="meta">Research report · October 20, 2026</div>
+</header>
+<nav class="toc toc-top" aria-label="Table of contents"><details open><summary>Contents</summary><div class="toc">
+<ul>
+<li><a href="#1-group-confidence-is-a-single-posterior-and-pooling-compresses-the-evidence-before-estimating-it">1. Group confidence is a single posterior, and pooling compresses the evidence before estimating it</a></li>
+<li><a href="#2-a-single-trace-carries-real-correctness-signal-but-in-units-that-do-not-transfer-across-models">2. A single trace carries real correctness signal, but in units that do not transfer across models</a><ul>
+<li><a href="#sampling-based-semantic-measures-collapse-to-vote-entropy-on-answer-extractable-tasks">Sampling-based semantic measures collapse to vote entropy on answer-extractable tasks</a></li>
+<li><a href="#token-statistics-work-best-as-local-minima-and-tail-windows">Token statistics work best as local minima and tail windows</a></li>
+<li><a href="#answer-stability-is-the-most-portable-trace-signal">Answer stability is the most portable trace signal</a></li>
+<li><a href="#length-revisions-and-hedges-are-real-but-confounded-with-difficulty-and-style">Length, revisions and hedges are real but confounded with difficulty and style</a></li>
+<li><a href="#hidden-state-probes-show-how-much-the-text-leaves-on-the-table">Hidden-state probes show how much the text leaves on the table</a></li>
+<li><a href="#why-these-signals-do-not-pool-directly">Why these signals do not pool directly</a></li>
+</ul>
+</li>
+<li><a href="#3-multi-model-methods-either-stop-at-final-answers-or-report-only-accuracy">3. Multi-model methods either stop at final answers or report only accuracy</a><ul>
+<li><a href="#confidence-aware-debate-compresses-every-turn-to-one-scalar">Confidence-aware debate compresses every turn to one scalar</a></li>
+<li><a href="#debate-dynamics-erase-the-discrimination-that-consistency-carried">Debate dynamics erase the discrimination that consistency carried</a></li>
+<li><a href="#cross-model-entropy-decompositions-work-on-answers-not-steps">Cross-model entropy decompositions work on answers, not steps</a></li>
+<li><a href="#correlated-errors-cap-what-agreement-can-certify">Correlated errors cap what agreement can certify</a></li>
+<li><a href="#the-closest-competitors-and-where-each-one-stops">The closest competitors, and where each one stops</a></li>
+</ul>
+</li>
+<li><a href="#4-reasoning-graphs-add-a-few-points-and-only-when-support-is-counted-by-independent-routes">4. Reasoning graphs add a few points, and only when support is counted by independent routes</a><ul>
+<li><a href="#three-ways-to-build-the-graph-with-very-different-costs">Three ways to build the graph, with very different costs</a></li>
+<li><a href="#degree-centrality-is-self-consistency-and-the-measured-gains-above-it-are-modest">Degree centrality is self-consistency, and the measured gains above it are modest</a></li>
+<li><a href="#the-shape-of-a-single-trace-is-weak-evidence-for-one-question">The shape of a single trace is weak evidence for one question</a></li>
+<li><a href="#argumentation-semantics-give-a-monotone-graph-to-confidence-map-that-nobody-has-calibrated">Argumentation semantics give a monotone graph-to-confidence map that nobody has calibrated</a></li>
+<li><a href="#constraint-inference-and-conformal-filtering-are-ready-made-add-ons">Constraint inference and conformal filtering are ready-made add-ons</a></li>
+</ul>
+</li>
+<li><a href="#5-under-binary-rewards-a-value-function-is-a-correctness-probability-but-for-a-different-object">5. Under binary rewards a value function is a correctness probability, but for a different object</a><ul>
+<li><a href="#orms-prms-and-the-three-probabilities-they-estimate">ORMs, PRMs and the three probabilities they estimate</a></li>
+<li><a href="#value-functions-advantages-and-critics">Value functions, advantages and critics</a></li>
+<li><a href="#group-baselines-are-monte-carlo-estimates-of-the-value">Group baselines are Monte Carlo estimates of the value</a></li>
+<li><a href="#label-free-rl-rewards-are-confidences-without-labels-a-derivation">Label-free RL rewards are confidences without labels (a derivation)</a></li>
+<li><a href="#where-the-analogy-between-value-and-confidence-breaks">Where the analogy between value and confidence breaks</a></li>
+<li><a href="#verifiers-versus-voting-at-matched-compute">Verifiers versus voting at matched compute</a></li>
+</ul>
+</li>
+<li><a href="#6-a-small-group-verifier-needs-only-cross-entropy-and-rl-only-once-it-writes-its-own-analysis">6. A small group verifier needs only cross-entropy, and RL only once it writes its own analysis</a><ul>
+<li><a href="#differentiable-objectives-cover-every-case-where-the-confidence-is-read-off-a-fixed-position">Differentiable objectives cover every case where the confidence is read off a fixed position</a></li>
+<li><a href="#rl-is-needed-when-the-verifier-must-learn-the-analysis-it-writes-before-the-confidence">RL is needed when the verifier must learn the analysis it writes before the confidence</a></li>
+<li><a href="#a-raoblackwellized-hybrid-estimator-a-derivation">A Rao–Blackwellized hybrid estimator (a derivation)</a></li>
+<li><a href="#what-the-evidence-says-about-sft-versus-rl">What the evidence says about SFT versus RL</a></li>
+<li><a href="#existing-trained-aggregators-output-answers-not-group-confidences">Existing trained aggregators output answers, not group confidences</a></li>
+</ul>
+</li>
+<li><a href="#7-pooling-theory-already-says-shared-evidence-counts-once-five-candidate-theorems-make-that-trace-specific">7. Pooling theory already says shared evidence counts once; five candidate theorems make that trace-specific</a><ul>
+<li><a href="#exact-bayesian-pooling-deflates-shared-evidence">Exact Bayesian pooling deflates shared evidence</a></li>
+<li><a href="#without-structural-information-no-aggregator-has-a-useful-guarantee">Without structural information, no aggregator has a useful guarantee</a></li>
+<li><a href="#dependent-juries-have-ceilings">Dependent juries have ceilings</a></li>
+<li><a href="#debate-theory-martingales-without-asymmetry-amplification-with-it">Debate theory: martingales without asymmetry, amplification with it</a></li>
+<li><a href="#guarantees-that-survive-arbitrary-within-question-dependence">Guarantees that survive arbitrary within-question dependence</a></li>
+<li><a href="#five-candidate-theorems-proposals-from-the-research-notes-not-literature">Five candidate theorems (proposals from the research notes, not literature)</a></li>
+<li><a href="#four-further-derivations-used-in-this-report-two-from-the-notes-two-new">Four further derivations used in this report (two from the notes, two new)</a></li>
+</ul>
+</li>
+<li><a href="#8-five-research-directions-compared-on-theory-cost-and-risk">8. Five research directions, compared on theory, cost and risk</a><ul>
+<li><a href="#a-dependence-aware-cross-model-reasoning-graph-confidence">(a) Dependence-aware cross-model reasoning-graph confidence</a></li>
+<li><a href="#b-argumentation-graph-confidence-with-a-calibration-evaluation">(b) Argumentation-graph confidence with a calibration evaluation</a></li>
+<li><a href="#c-a-small-trained-group-verifier-with-an-rl-variant-and-content-ablations">(c) A small trained group verifier, with an RL variant and content ablations</a></li>
+<li><a href="#d-the-bridge-the-graph-confidence-as-a-label-free-reward">(d) The bridge: the graph confidence as a label-free reward</a></li>
+<li><a href="#e-debate-recovering-discrimination-from-switching-evidence">(e) Debate: recovering discrimination from switching evidence</a></li>
+</ul>
+</li>
+<li><a href="#9-recommendation-build-the-dependence-aware-graph-confidence-and-test-it-against-a-trained-reader">9. Recommendation: build the dependence-aware graph confidence and test it against a trained reader</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#references">References</a><ul>
+<li><a href="#closest-competitors-and-multi-model-confidence">Closest competitors and multi-model confidence</a></li>
+<li><a href="#debate-conformity-and-correlated-errors">Debate, conformity and correlated errors</a></li>
+<li><a href="#latent-truth-and-weak-supervision-aggregators-baselines-only">Latent-truth and weak-supervision aggregators (baselines only)</a></li>
+<li><a href="#single-trace-and-sampling-based-confidence">Single-trace and sampling-based confidence</a></li>
+<li><a href="#reasoning-graphs-topology-and-argumentation">Reasoning graphs, topology and argumentation</a></li>
+<li><a href="#reward-models-verifiers-value-estimation-and-label-free-rl">Reward models, verifiers, value estimation and label-free RL</a></li>
+<li><a href="#training-calibrated-confidence-and-trained-aggregators">Training calibrated confidence and trained aggregators</a></li>
+<li><a href="#pooling-aggregation-evaluation-and-guarantees">Pooling, aggregation, evaluation and guarantees</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</details></nav>
+<main>
+<p>As of October 2026, <strong>no published method turns the full reasoning traces of several heterogeneous LLMs into a calibrated probability that the group's answer is correct and evaluates it with AUROC, AUARC and Brier</strong>. The opening is real but narrow, and most of its value is theoretical rather than a large accuracy gain. The three nearest 2026 systems report only selection accuracy. Reasoning Consensus merges step DAGs from several models and gains <strong>0 to 3.1 points over a matched majority vote</strong> (<a href="https://arxiv.org/abs/2607.27783" target="_blank" rel="noopener">Parulekar et al., 2026</a>). DDRG aligns step graphs from one model and gains <strong>+0.41 to +0.65 points over self-consistency</strong> (<a href="https://arxiv.org/abs/2610.18606" target="_blank" rel="noopener">Liu et al., 2026</a>). LLMs-as-a-Jury uses only cross-model answer agreement, derives a closed-form accuracy law and finds a "shared-error floor" (<a href="https://arxiv.org/abs/2607.10139" target="_blank" rel="noopener">Liu, 2026</a>). Pooling theory explains both these small gains and the reader's own saturation result. When votes are exchangeable, every monotone pool of the same counts produces the same ranking. Every exact Bayesian model with overlapping information also requires shared evidence to be counted once (<a href="https://doi.org/10.1007/s00355-010-0453-x" target="_blank" rel="noopener">Dietrich, 2010</a>; <a href="https://arxiv.org/abs/1406.2148" target="_blank" rel="noopener">Satopää et al., 2016</a>), so a log-odds sum overcounts by exactly the evidence the agents share. Traces matter because they make that overlap observable for each question. Robust-aggregation theorems show that without such structure, no aggregator reliably beats following a random expert (<a href="https://arxiv.org/abs/2111.03153" target="_blank" rel="noopener">Neyman and Roughgarden</a>).</p>
+<p>The strongest ICML bet is a training-free, dependence-aware cross-model reasoning-graph confidence. It counts support over shared reasoning atoms and distinct derivation routes, and it rests on inclusion–exclusion, effective-number and saturation theorems, with a dependence-robust e-value/conformal wrapper on top. It should be paired with two things: a small group verifier trained with plain cross-entropy, as the learned comparison, and a debate-trajectory likelihood ratio, as a second use of the same principle. RL becomes necessary only if the verifier writes its own analysis before giving a confidence. A calibrated graph confidence then doubles as a label-free reward, and its policy-gradient bias is bounded by its excess Brier score (derived in this report). Realistic effects are a few AUROC points, concentrated on questions where agents agree for the wrong reason. The paper should be designed so that a null result on that subset is itself a finding.</p>
+<h2 id="1-group-confidence-is-a-single-posterior-and-pooling-compresses-the-evidence-before-estimating-it">1. Group confidence is a single posterior, and pooling compresses the evidence before estimating it</h2>
+<p>Fix a question \(q\) with gold answer \(a^\star\) and a group of \(m\) agents, which in the ARR setting are two to five different open models. In the voting protocol, agent \(i\) samples \(k=6\) reasoning paths \(\tau_{i1},\dots,\tau_{ik}\) with final answers \(a_{ij}\). In the debate protocol, it writes one trace per round \(r=0,\dots,R\) while reading its peers. An aggregation rule produces the group answer \(\hat a\): a plurality vote, or the final-round answer of a debate. The event of interest is \(Y=\mathbf 1[\hat a=a^\star]\), and the target is its posterior probability given everything the system wrote:</p>
+<div class="math-display">\[c^\star(q,\mathcal T)\;=\;P\big(Y=1 \,\big|\, q,\mathcal T\big),\qquad \mathcal T=\{\tau_{ij}\}_{i\le m,\;j\le k}.\]</div>
+<p>All five benchmarks (CommonsenseQA, BoolQ, GSM8K, TruthfulQA, GPQA) have gold labels, so \(Y\) is observed on every calibration question. In this report, <strong>training-free</strong> means that no parameter is fitted on \(Y\) beyond, at most, a monotone recalibration map or a couple of scalars. <strong>Lightly learned</strong> means a probe, a logistic layer or weights fitted on tens to a few hundred labels. <strong>Trained</strong> means fine-tuning or reinforcement learning (RL) of a network.</p>
+<p>The ARR paper's group confidence is a special case. There, \(\mathcal T\) is first compressed to one scalar per agent, \(p_i=p_i(\hat a)\), and then pooled by a fixed map \(f\). The scalar can be the self-consistency share \(p_i=\tfrac1k\sum_j\mathbf 1[a_{ij}=\hat a]\), a verbalized confidence or a token log-probability. The pools are:</p>
+<ul>
+<li>the mean \(\tfrac1m\sum_ip_i\);</li>
+<li>the log-odds sum \(\sum_i\operatorname{logit}p_i\);</li>
+<li>the beta-transformed linear pool \(H_{\alpha,\beta}\!\left(\sum_iw_ip_i\right)\), a Beta CDF applied to a weighted average. Ranjan and Gneiting introduced it after proving that "any non-trivial weighted average of two or more distinct, calibrated probability forecasts is necessarily uncalibrated" (<a href="https://doi.org/10.1111/j.1467-9868.2009.00726.x" target="_blank" rel="noopener">Ranjan and Gneiting, 2010</a>);</li>
+<li>logistic pooling \(\sigma\!\left(w_0+\sum_iw_i\operatorname{logit}p_i\right)\);</li>
+<li>a Kahn-style rule.</li>
+</ul>
+<p>Whatever \(f\) is, the pooled score depends on the traces only through the statistic \(s(\mathcal T)=(p_1,\dots,p_m)\). The Bayes risk of a proper scoring rule cannot rise when the information set grows; Li states this as "the optimal calibrated risk under proper scoring rules cannot increase when additional judge signals are made available" (<a href="https://arxiv.org/abs/2605.09702" target="_blank" rel="noopener">Li, 2026</a>). The research question is therefore how much information about \(Y\) the traces carry <strong>beyond \(s(\mathcal T)\) and beyond the final answers</strong>, and which estimator can extract it with little or no labeled data.</p>
+<p>One identity organizes the rest of the report. For any confidence \(c\) computed from the traces, the Brier score splits into an estimation error and an irreducible term:</p>
+<div class="math-display">\[\mathbb E\big[(c-Y)^2\big]\;=\;\underbrace{\mathbb E\big[(c-c^\star)^2\big]}_{\text{excess Brier}}\;+\;\underbrace{\mathbb E\big[c^\star(1-c^\star)\big]}_{\text{fixed by what } c \text{ conditions on}}.\]</div>
+<p>The cross term vanishes by the tower property. The second term depends only on the conditioning information. Compressing \(\mathcal T\) to \(s(\mathcal T)\) replaces \(c^\star\) with a coarser posterior and raises this floor, whatever pool is used afterwards. Changing the pool moves only the first term. This is the formal content of the reader's observation that pooling statistics saturate. The decomposition is standard algebra. Section 7 (derivation D2) reuses it to bound how biased a confidence is when it serves as an RL reward, and Section 8(d) builds on that bound.</p>
+<p>The evaluation metrics measure different parts of this decomposition. <strong>AUROC</strong> (area under the receiver operating characteristic curve) is the probability that a randomly chosen correct group answer gets a higher confidence than a randomly chosen incorrect one. It is a pure measure of discrimination. <strong>AUARC</strong> (area under the accuracy–rejection curve) sorts questions by confidence, discards the least confident fraction \(r\), records the accuracy of what remains, and integrates over \(r\in[0,1]\). It depends on both base accuracy and ranking. When two protocols produce different group answers, as voting and debate do, AUARC mixes accuracy gains with confidence quality. Traub et al. make this critique of AURC-type metrics and propose AUGRC as a replacement (<a href="https://arxiv.org/abs/2407.01032" target="_blank" rel="noopener">Traub et al., 2024</a>).</p>
+<p>The <strong>Brier score</strong> is \(\tfrac1n\sum_n(c_n-Y_n)^2\). <strong>ECE</strong> (expected calibration error) is the binned average gap between confidence and accuracy, and it is not even continuous as a measure of miscalibration (<a href="https://arxiv.org/abs/2211.16886" target="_blank" rel="noopener">Błasiok et al., 2023</a>). <strong>Platt scaling</strong> maps a score \(s\) to \(\sigma(\alpha s+\beta)\). With \(\alpha&gt;0\) it is strictly increasing, so <strong>it leaves AUROC and AUARC exactly unchanged</strong> and changes only the reliability part of the Brier score. After optimal monotone (isotonic) recalibration, the Brier score equals uncertainty minus discrimination in the CORP decomposition (<a href="https://doi.org/10.1073/pnas.2016191118" target="_blank" rel="noopener">Dimitriadis, Gneiting and Jordan, 2021</a>). The part that no recalibration can remove is what Perez-Lebel et al. call the grouping loss (<a href="https://arxiv.org/abs/2210.16315" target="_blank" rel="noopener">Perez-Lebel et al., 2023</a>). Better ranking can only come from new information; a different pool of the same statistic cannot supply it.</p>
+<p>Two further distinctions run through the report. A group confidence needs <strong>across-question discrimination</strong> (AUROC, AUARC). A vote-weighting scheme needs <strong>within-question discrimination</strong>. Taubenfeld et al. measure the latter as WQD, the fraction of (correct, incorrect) answer pairs for the same question in which the correct answer scores higher. They found that the most calibrated confidence was the least effective for within-question selection (<a href="https://arxiv.org/abs/2502.06233" target="_blank" rel="noopener">Taubenfeld et al., 2025</a>), so a trace-based method should report both. The second distinction separates the <em>value of a prompt for a policy</em> from <em>confidence in a specific produced answer</em>. It decides how far RL machinery transfers, and Section 5 covers it.</p>
+<h2 id="2-a-single-trace-carries-real-correctness-signal-but-in-units-that-do-not-transfer-across-models">2. A single trace carries real correctness signal, but in units that do not transfer across models</h2>
+<h3 id="sampling-based-semantic-measures-collapse-to-vote-entropy-on-answer-extractable-tasks">Sampling-based semantic measures collapse to vote entropy on answer-extractable tasks</h3>
+<p>The classical training-free family samples several outputs, compares them, and scores how dispersed they are. <strong>Semantic entropy (SE)</strong> clusters sampled answers by bidirectional entailment and computes \(\mathrm{SE}(x)\approx-\sum_iP(C_i\mid x)\log P(C_i\mid x)\) over meaning clusters \(C_i\). Its discrete variant estimates \(P(C_i\mid x)\) as the fraction of samples in each cluster. Across 30 task–model combinations, SE averaged <strong>AUROC 0.790 against 0.698 for P(True)</strong> (<a href="https://doi.org/10.1038/s41586-024-07421-0" target="_blank" rel="noopener">Farquhar et al., 2024</a>; <a href="https://arxiv.org/abs/2302.09664" target="_blank" rel="noopener">Kuhn et al., 2023</a>). The authors state that it targets only arbitrary "confabulations" and cannot catch systematic errors.</p>
+<p><strong>Kernel language entropy (KLE)</strong> generalizes SE. It builds an NLI-weighted graph \(W\) over the samples, forms the Laplacian \(L=D-W\) and a unit-trace heat kernel \(K_t=e^{-tL}/\operatorname{Tr}e^{-tL}\), and scores the von Neumann entropy</p>
+<div class="math-display">\[\mathrm{KLE}(x)=\mathrm{VNE}(K_t)=-\operatorname{Tr}\left[K_t\log K_t\right]=-\textstyle\sum_i\lambda_i\log\lambda_i .\]</div>
+<p>Its Theorem 3.5 shows that a block-diagonal kernel recovers SE. On Llama-2-70B-Chat, KLE improved AUROC from 0.74 to 0.87 on BioASQ and from 0.62 to 0.76 on SVAMP (<a href="https://arxiv.org/abs/2405.20003" target="_blank" rel="noopener">Nikitin et al., 2024</a>).</p>
+<p>The spectral measures of Lin et al. come from the normalized Laplacian of a response-similarity graph:</p>
+<ul>
+<li>\(U_{\mathrm{EigV}}=\sum_k\max(0,1-\lambda_k)\), a soft count of distinct meanings;</li>
+<li>degree \(C_{\mathrm{Deg}}(s_j)=D_{jj}/m\);</li>
+<li>eccentricity.</li>
+</ul>
+<p>Their central finding is that "the choice of similarity matters more than the choice of Deg, Ecc, EigV" (<a href="https://arxiv.org/abs/2305.19187" target="_blank" rel="noopener">Lin et al., 2024</a>). That is the same lesson as the reader's saturation result, seen from the graph side. A 2026 comparison of 21 methods found that consensus-based measures (Deg, EigV) "consistently outperform other UQ approaches" (<a href="https://arxiv.org/abs/2606.22792" target="_blank" rel="noopener">Ou et al., 2026</a>).</p>
+<p>For tasks with one extractable answer, such as GSM8K numbers, multiple-choice letters or yes/no, discrete SE over final answers is simply the entropy of the self-consistency vote distribution. Lyu et al.'s agreement, entropy and first–second gap (FSD) measures over sampled chains already beat logit, P(True) and verbalized baselines in Brier on nine datasets. Their gains saturate at about 15–20 samples, and instruction tuning hurts calibration (<a href="https://arxiv.org/abs/2402.13904" target="_blank" rel="noopener">Lyu et al., 2024</a>).</p>
+<p>Two 2026 results temper agreement on reasoning models. Across 265,000 samples on GPQA-Diamond and AIME, agreement is "a positive but weak predictor (rho 0.20–0.59)". For the most consistent frontier model, <strong>agreement was at least 0.8 on 77% of GPQA items and 48% of those were wrong</strong> (<a href="https://arxiv.org/abs/2607.08065" target="_blank" rel="noopener">Ding, 2026</a>). On seven reasoning models, a lexical single-trace score (SelfDoubt) reached mean AUROC 0.7895 against 0.7407 for SE, at roughly a tenth of the cost (<a href="https://arxiv.org/abs/2604.06389" target="_blank" rel="noopener">Pandey et al., 2026</a>).</p>
+<h3 id="token-statistics-work-best-as-local-minima-and-tail-windows">Token statistics work best as local minima and tail windows</h3>
+<p>DeepConf defines a token confidence \(C_i=-\tfrac1k\sum_{j\le k}\log P_i(j)\) over the top-\(k\) candidates at position \(i\) and averages it over sliding windows of 1,024–2,048 tokens. It then scores a trace by its lowest window, its bottom 10% of windows, or its final 2,048 tokens. Confidence-filtered voting raised GPT-OSS-120B on AIME25 to <strong>99.9% against 97.0% for majority voting at 512 traces</strong> (<a href="https://arxiv.org/abs/2508.15260" target="_blank" rel="noopener">Fu et al., 2025</a>). Those results use pools of 512–4,096 traces per problem, far from six paths per agent, and the authors warn that "confidently wrong" traces cause regressions under aggressive filtering. Other token-level scores include:</p>
+<ul>
+<li><strong>self-certainty</strong>, \(-\tfrac1{nV}\sum_{i}\sum_j\log\!\big(V\,p(j\mid x,y_{&lt;i})\big)\), the KL divergence from the uniform distribution averaged over positions, combined with Borda voting (<a href="https://arxiv.org/abs/2502.18581" target="_blank" rel="noopener">Kang et al., 2025</a>);</li>
+<li>the <strong>top-1/top-2 margin</strong> over answer tokens used by CoT-decoding (<a href="https://arxiv.org/abs/2402.10200" target="_blank" rel="noopener">Wang and Zhou, 2024</a>);</li>
+<li>confidence on <strong>intermediate</strong> numbers and entities in CER, which gains up to 7.4 points in math by weighting votes with it (<a href="https://arxiv.org/abs/2502.14634" target="_blank" rel="noopener">Razghandi et al., 2025</a>).</li>
+</ul>
+<p>Across this literature, local or tail statistics beat global means.</p>
+<h3 id="answer-stability-is-the-most-portable-trace-signal">Answer stability is the most portable trace signal</h3>
+<p>Several methods probe the trace at intermediate points:</p>
+<ul>
+<li><strong>Prefix consistency</strong> truncates a chain, regenerates the remainder, and weights each answer by how often it reappears. It was the "best correctness predictor in most settings" across five reasoning models, reached the majority-vote plateau with up to 21 times fewer tokens, and needs no log-probabilities (<a href="https://arxiv.org/abs/2605.07654" target="_blank" rel="noopener">Iwase et al., 2026</a>).</li>
+<li><strong>Certaindex</strong> measures when intermediate answers stop changing (<a href="https://arxiv.org/abs/2412.20993" target="_blank" rel="noopener">Fu et al., 2024</a>).</li>
+<li>On math, models "typically converge to their final answers after 60% of the reasoning steps" (<a href="https://arxiv.org/abs/2506.02536" target="_blank" rel="noopener">Liu and Wang, 2025</a>).</li>
+<li>On GSM8K with Qwen2.5-7B, chains whose answer entropy decreases monotonically were <strong>68.8% accurate against 46.8%</strong> for non-monotone chains. The scalar start-minus-end entropy drop was not predictive (<a href="https://arxiv.org/abs/2603.18940" target="_blank" rel="noopener">Zhao, 2026</a>).</li>
+</ul>
+<p>One caution applies: forcing an answer by injecting <code>&lt;/think&gt;</code> does not always produce a clean answering phase (<a href="https://arxiv.org/abs/2609.03633" target="_blank" rel="noopener">Koh et al., 2026</a>). Stability signals measure "the probability of re-deriving the same answer". That unit is the same for every model, which makes it attractive for heterogeneous pools.</p>
+<h3 id="length-revisions-and-hedges-are-real-but-confounded-with-difficulty-and-style">Length, revisions and hedges are real but confounded with difficulty and style</h3>
+<p>Within a question, shorter chains are more often correct: "up to 34.5% more accurate than the longest chain sampled for the same question" (<a href="https://arxiv.org/abs/2505.17813" target="_blank" rel="noopener">Hassid et al., 2025</a>). Trace length becomes a useful signal <strong>only after reasoning post-training</strong> and correlates with forking-token counts at a median Spearman above 0.8 (<a href="https://arxiv.org/abs/2510.10409" target="_blank" rel="noopener">Devic et al., 2025</a>). Two structural signals also predict correctness:</p>
+<ul>
+<li>The failed-step fraction of an LLM-extracted reasoning graph is significantly correlated with accuracy for every model tested on HARP and GPQA-Diamond (<a href="https://arxiv.org/abs/2509.19284" target="_blank" rel="noopener">Feng et al., 2025</a>).</li>
+<li>Incorrect traces more often show backtracking that "persist[s] and cluster[s] late" (<a href="https://arxiv.org/abs/2605.27965" target="_blank" rel="noopener">Rezazadeh and Davoodi, 2026</a>).</li>
+</ul>
+<p>Surface markers are weaker. Removing the internal signal that drives pivots "roughly halves backtracking without changing answer accuracy" (<a href="https://openreview.net/forum?id=IUX6hpNZBd" target="_blank" rel="noopener">Zulaika et al., ICML 2026 workshop</a>). In thinking models, uncertainty acknowledgment is amplified three to seven times "yet is weakly or negatively associated with correctness" (<a href="https://arxiv.org/abs/2608.13760" target="_blank" rel="noopener">Nyandwi et al., 2026</a>). SelfDoubt's hedge-to-verify ratio is striking on average: traces with no hedges were correct 96.1% of the time at 25.4% coverage. That coverage fell to 0.9% for Gemini, and the marker lexicons are model-specific (<a href="https://arxiv.org/abs/2604.06389" target="_blank" rel="noopener">Pandey et al., 2026</a>).</p>
+<h3 id="hidden-state-probes-show-how-much-the-text-leaves-on-the-table">Hidden-state probes show how much the text leaves on the table</h3>
+<p>Light probes on hidden states are lightly learned, model-specific references, not deployable multi-model methods. They show that much more correctness information exists than output-space signals recover. A logistic probe on Qwen3-8B states reached <strong>AUROC 0.84 after four tokens, while the best output-space baseline reached 0.59</strong> (<a href="https://arxiv.org/abs/2511.14773" target="_blank" rel="noopener">David, 2025</a>). Probes on intermediate-answer chunks exceed 0.9 in distribution but transfer poorly across domains (<a href="https://arxiv.org/abs/2504.05419" target="_blank" rel="noopener">Zhang et al., 2025</a>). A probe with fewer than 10M parameters matches PRMs "up to 810x larger" at scoring steps (<a href="https://arxiv.org/abs/2511.06209" target="_blank" rel="noopener">Ni et al., 2026</a>).</p>
+<p>Verbalized confidence from reasoning models is better calibrated than from their non-reasoning counterparts in 33 of 36 settings (<a href="https://arxiv.org/abs/2505.14489" target="_blank" rel="noopener">Yoon et al., 2025</a>). It is still overconfident in absolute terms, often above 85% on wrong answers and rising with deeper reasoning (<a href="https://arxiv.org/abs/2506.18183" target="_blank" rel="noopener">Mei et al., 2026</a>).</p>
+<h3 id="why-these-signals-do-not-pool-directly">Why these signals do not pool directly</h3>
+<p>For a heterogeneous group, the main problem is units. Self-certainty depends on vocabulary size. DeepConf thresholds vary by model and dataset. SelfDoubt needs per-model lexicons. Different estimators give "divergent assessments of the same traces" (<a href="https://arxiv.org/abs/2606.03969" target="_blank" rel="noopener">Gani et al., 2026</a>). An audit of routing on olympiad math found raw-confidence AUROC of only 0.537 and 0.440 in two Gemma cells, and isotonic recalibration could fix ECE but not discrimination (<a href="https://arxiv.org/abs/2609.27822" target="_blank" rel="noopener">Jiang et al., 2026</a>). In multi-turn agents, tokens copied from context get "systematically inflated log probabilities" (<a href="https://arxiv.org/abs/2608.24024" target="_blank" rel="noopener">Kook et al., 2026</a>). That is a warning for debate, where agents copy each other's text. Single-trace signals should therefore enter a group confidence in one of two forms. The first is a unit-free quantity: re-derivation agreement, stabilization time as a fraction of the trace, or monotonicity. The second is a raw score after within-agent, within-question normalization, which also removes the difficulty confound that length and hedges carry.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal family</th>
+<th>Representative method</th>
+<th>What it reads</th>
+<th>Regime</th>
+<th>Evidence (as reported)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Answer dispersion</td>
+<td>Agreement/FSD (<a href="https://arxiv.org/abs/2402.13904" target="_blank" rel="noopener">Lyu et al.</a>)</td>
+<td>Final answers of sampled chains</td>
+<td>TF</td>
+<td>Beats logit, P(True), verbalized in Brier on 9 datasets; saturates at 15–20 samples</td>
+</tr>
+<tr>
+<td>Meaning clusters</td>
+<td>SE (<a href="https://doi.org/10.1038/s41586-024-07421-0" target="_blank" rel="noopener">Farquhar et al.</a>)</td>
+<td>Entailment clusters</td>
+<td>TF</td>
+<td>Mean AUROC 0.790 vs 0.698 for P(True)</td>
+</tr>
+<tr>
+<td>Kernel entropy</td>
+<td>KLE (<a href="https://arxiv.org/abs/2405.20003" target="_blank" rel="noopener">Nikitin et al.</a>)</td>
+<td>NLI graph, heat kernel</td>
+<td>TF</td>
+<td>BioASQ 0.87 vs 0.74 (Llama-2-70B)</td>
+</tr>
+<tr>
+<td>Graph spectrum</td>
+<td>EigV/Deg/Ecc (<a href="https://arxiv.org/abs/2305.19187" target="_blank" rel="noopener">Lin et al.</a>)</td>
+<td>Response similarity graph</td>
+<td>TF</td>
+<td>Similarity choice matters more than statistic</td>
+</tr>
+<tr>
+<td>Token confidence</td>
+<td>DeepConf (<a href="https://arxiv.org/abs/2508.15260" target="_blank" rel="noopener">Fu et al.</a>)</td>
+<td>Lowest/tail window log-probs</td>
+<td>TF</td>
+<td>99.9% vs 97.0% MV@512 (AIME25)</td>
+</tr>
+<tr>
+<td>Answer stability</td>
+<td>Prefix consistency (<a href="https://arxiv.org/abs/2605.07654" target="_blank" rel="noopener">Iwase et al.</a>)</td>
+<td>Regenerated suffix answers</td>
+<td>TF</td>
+<td>Best predictor in most settings; no logprobs</td>
+</tr>
+<tr>
+<td>Uncertainty shape</td>
+<td>Monotone entropy (<a href="https://arxiv.org/abs/2603.18940" target="_blank" rel="noopener">Zhao</a>)</td>
+<td>Prefix answer entropy</td>
+<td>TF</td>
+<td>68.8% vs 46.8% accuracy</td>
+</tr>
+<tr>
+<td>Lexical</td>
+<td>SelfDoubt HVR (<a href="https://arxiv.org/abs/2604.06389" target="_blank" rel="noopener">Pandey et al.</a>)</td>
+<td>Hedge/verify counts</td>
+<td>TF (label-free per-model z-scoring)</td>
+<td>AUROC 0.7895 vs SE 0.7407</td>
+</tr>
+<tr>
+<td>Length</td>
+<td>Trace length (<a href="https://arxiv.org/abs/2510.10409" target="_blank" rel="noopener">Devic et al.</a>)</td>
+<td>Token count</td>
+<td>TF</td>
+<td>Useful only after reasoning post-training</td>
+</tr>
+<tr>
+<td>Structure</td>
+<td>Failed-step fraction (<a href="https://arxiv.org/abs/2509.19284" target="_blank" rel="noopener">Feng et al.</a>)</td>
+<td>LLM-extracted graph</td>
+<td>TF (LLM extractor)</td>
+<td>Significant for every model; +5–13% when selecting among 64</td>
+</tr>
+<tr>
+<td>Hidden states</td>
+<td>Temporal probe (<a href="https://arxiv.org/abs/2511.14773" target="_blank" rel="noopener">David</a>)</td>
+<td>Final-layer states</td>
+<td>LL</td>
+<td>AUROC 0.84 at 4 tokens vs 0.59 output-space</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="3-multi-model-methods-either-stop-at-final-answers-or-report-only-accuracy">3. Multi-model methods either stop at final answers or report only accuracy</h2>
+<h3 id="confidence-aware-debate-compresses-every-turn-to-one-scalar">Confidence-aware debate compresses every turn to one scalar</h3>
+<p>All published confidence-aware debate methods summarize each agent's turn as one number, recalibrate it, and use it as a vote weight, an attention weight or a prompt cue.</p>
+<ul>
+<li><strong>ReConcile</strong> recalibrates verbalized confidence with a hand-set step function. Its weighted vote reaches 79.0 on StrategyQA against 77.1 for unweighted majority, and removing model diversity drops it to 72.2 (<a href="https://arxiv.org/abs/2309.13007" target="_blank" rel="noopener">Chen, Saha and Bansal, 2024</a>).</li>
+<li><strong>ConfMAD</strong> applies Platt scaling, histogram binning or temperature scaling to length-normalized key-token probabilities and to verbalized scores. It fits them on round-0 outputs and shows the calibrated values to the other agents. Platt was the most stable calibrator (<a href="https://arxiv.org/abs/2509.14034" target="_blank" rel="noopener">Lin and Hooi, 2025</a>).</li>
+<li><strong>DebUnc</strong> passes uncertainty through a modified attention mechanism (<a href="https://arxiv.org/abs/2407.06426" target="_blank" rel="noopener">Yoffe et al., 2024</a>).</li>
+<li><strong>Zhu et al.</strong> train a 0–10 confidence tag with SFT and GRPO. They prove that vanilla Dirichlet-compound-multinomial debate is a martingale, and that confidence-weighted debate is a strict submartingale <strong>only if confidence correlates positively with correctness</strong> (<a href="https://arxiv.org/abs/2601.19921" target="_blank" rel="noopener">Zhu et al., 2026</a>).</li>
+<li><strong>MARGIN</strong> corrects self-reported confidence per confidence band from recent accuracy. On BigCodeBench, model-mean confidence was negatively related to accuracy (<a href="https://arxiv.org/abs/2605.22949" target="_blank" rel="noopener">Armstrong, 2026</a>).</li>
+<li>An audit of 4,181 olympiad traces found AUROC 0.72 for confidence, but with 79% mean stated confidence against 52% accuracy. Isotonic regression cut ECE from 0.278 to 0.008 but "cannot add discrimination" (<a href="https://arxiv.org/abs/2609.27822" target="_blank" rel="noopener">Jiang et al., 2026</a>).</li>
+</ul>
+<p>None of these methods uses the content of the traces to set the group confidence.</p>
+<h3 id="debate-dynamics-erase-the-discrimination-that-consistency-carried">Debate dynamics erase the discrimination that consistency carried</h3>
+<p>Choi, Zhu and Li model debate as Dirichlet-compound-multinomial (DCM) Bayesian updating, a Dirichlet belief updated by counts of neighbours' answers. They prove that each agent's belief in the correct answer is a martingale under a neighbour-average condition, so <strong>debate alone does not raise expected correctness</strong>. Majority voting explains most debate gains: Qwen2.5-7B averaged 0.7205 as a single agent, 0.7691 with majority vote and 0.7377 with the best debate variant (<a href="https://arxiv.org/abs/2508.17536" target="_blank" rel="noopener">Choi, Zhu and Li, 2025</a>). Other dynamics papers point the same way:</p>
+<ul>
+<li>In homogeneous teams, the gap between verbalized confidence on correct and on wrong answers <strong>shrank under debate in all six model–dataset cells</strong>. Modal-answer adoption reached 85.5% and the correct-to-wrong vulnerability rate reached 70% (<a href="https://arxiv.org/abs/2605.00914" target="_blank" rel="noopener">Bertalanič and Fortuna, 2026</a>).</li>
+<li>With five GPT-4o agents, 37% of agent–question pairs changed answer with no peer information at all (<a href="https://arxiv.org/abs/2606.00820" target="_blank" rel="noopener">Hao et al., 2026</a>).</li>
+<li>In mixed-capability groups, models often move from correct to incorrect answers in response to peer reasoning (<a href="https://arxiv.org/abs/2509.05396" target="_blank" rel="noopener">Wynn et al., 2025</a>).</li>
+<li>Shared misconceptions pull debate toward wrong answers (<a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/32e07a110c6c6acf1afbf2bf82b614ad-Paper-Conference.pdf" target="_blank" rel="noopener">Estornell and Liu, NeurIPS 2024</a>).</li>
+</ul>
+<p>These results are consistent with the reader's two debate findings. Agents converge, so final-round agreement says less. Yet the trajectory still carries information, because wrong agents switch more often than right ones. The notes found <strong>no study that measures AUROC or AUARC of group confidence before and after debate for heterogeneous groups</strong> under identical conditions. The reader's cached debate logs can do that directly.</p>
+<h3 id="cross-model-entropy-decompositions-work-on-answers-not-steps">Cross-model entropy decompositions work on answers, not steps</h3>
+<p>A 2026 line of work defines training-free cross-model uncertainty as within-model dispersion plus a between-model divergence:</p>
+<ul>
+<li><strong>Ensemble semantic entropy</strong> uses \(H_{\mathrm{ESE}}=\tfrac1L\sum_l\mathrm{SE}_l+\mathrm{JSD}(p_1,\dots,p_L)\) (<a href="https://arxiv.org/abs/2603.27098" target="_blank" rel="noopener">Wei et al., 2026</a>).</li>
+<li><strong>Collaborative entropy</strong> adds \(\sum_iw_i\,\mathrm{KL}(p_i\Vert\bar p)\) over shared semantic clusters. On TriviaQA with three 7–8B models it reached AUROC 0.772 against 0.687 for SE (<a href="https://arxiv.org/abs/2603.28360" target="_blank" rel="noopener">Sun et al., 2026</a>).</li>
+<li><strong>Hamidieh et al.</strong> define total uncertainty as aleatoric plus epistemic, with epistemic uncertainty measured as the gap between inter-model and intra-model similarity. It averaged AUROC 0.72 against 0.64 for the best baseline over ten tasks that include GSM8K and TruthfulQA, and it was highest exactly on confident failures (<a href="https://arxiv.org/abs/2604.17112" target="_blank" rel="noopener">Hamidieh et al., 2026</a>).</li>
+<li><strong>Cross-consistency against a verifier model</strong> raised maximum AUROC by about 0.10 on SQuAD and TriviaQA (<a href="https://arxiv.org/abs/2502.15845" target="_blank" rel="noopener">Xue et al., 2025</a>).</li>
+</ul>
+<p>All of these operate on final answers or whole-response clusters. Lifting the within-plus-between decomposition to aligned steps is open.</p>
+<h3 id="correlated-errors-cap-what-agreement-can-certify">Correlated errors cap what agreement can certify</h3>
+<p>When two models on HELM are both wrong, they choose the same wrong answer <strong>60% of the time against a random baseline near one third</strong>. More accurate models, even from different providers, have more correlated errors (<a href="https://arxiv.org/abs/2506.07962" target="_blank" rel="noopener">Kim et al., ICML 2025</a>). Related findings:</p>
+<ul>
+<li>Model mistakes "are becoming more similar with increasing capabilities" by the CAPA error-overlap metric (<a href="https://arxiv.org/abs/2502.04313" target="_blank" rel="noopener">Goel et al., 2025</a>).</li>
+<li>Nine frontier judges from seven families "effectively provide only about 2 independent votes' worth of information", and established aggregators closed at most 11% of the gap to independent voting (<a href="https://arxiv.org/abs/2605.29800" target="_blank" rel="noopener">Kohli, 2026</a>).</li>
+<li>Polling-style aggregation, including surprisingly-popular voting, gave no consistent truthfulness gain even at 25 times the inference cost (<a href="https://arxiv.org/abs/2603.06612" target="_blank" rel="noopener">Denisov-Blanch et al., 2026</a>).</li>
+<li>In open-weight models, wrong-consensus agreement is almost entirely "mechanical", that is, explained by a per-case answer preference (<a href="https://arxiv.org/abs/2608.18795" target="_blank" rel="noopener">Zhang et al., 2026</a>).</li>
+<li>Mixing models can lower quality relative to aggregating the best single model (<a href="https://arxiv.org/abs/2502.00674" target="_blank" rel="noopener">Li et al., 2025</a>).</li>
+</ul>
+<p>This is the <strong>shared-error floor</strong>. When all agents agree on a wrong answer, no function of the answers can flag it. The only room left for traces is to tell agents who agree for independent reasons from agents who agree because they reproduce the same derivation.</p>
+<h3 id="the-closest-competitors-and-where-each-one-stops">The closest competitors, and where each one stops</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Work</th>
+<th>Models</th>
+<th>Reads steps?</th>
+<th>Output</th>
+<th>Calibration reported?</th>
+<th>Reported gain</th>
+<th>Gap relative to the reader's target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reasoning Consensus (<a href="https://arxiv.org/abs/2607.27783" target="_blank" rel="noopener">2607.27783</a>)</td>
+<td>4 open models, 20 chains</td>
+<td>Yes: typed DAGs from a 32B extractor, LLM-judge matching</td>
+<td>Answer</td>
+<td>No AUROC/ECE</td>
+<td>0 to +3.1 over matched MV</td>
+<td>Counts attestations as independent; large judge; optional accuracy priors from 50 labels</td>
+</tr>
+<tr>
+<td>DDRG (<a href="https://arxiv.org/abs/2610.18606" target="_blank" rel="noopener">2610.18606</a>)</td>
+<td>One 7–8B solver, 3 traces</td>
+<td>Yes: source-grounded dependency graphs</td>
+<td>Corrected answer</td>
+<td>No; graph only routes verifier calls</td>
+<td>+0.41 to +0.65 over SC</td>
+<td>Single model; no confidence</td>
+</tr>
+<tr>
+<td>LLMs as a Jury (<a href="https://arxiv.org/abs/2607.10139" target="_blank" rel="noopener">2607.10139</a>)</td>
+<td>Several independently trained models</td>
+<td>No: final answers only</td>
+<td>Selection and accuracy law</td>
+<td>AUROC gates; 0.748 on HumanEval+</td>
+<td>Beats PRMs/ORMs on MATH-500, AIME, GPQA</td>
+<td>Ignores content; shared-error floor; single-author preprint</td>
+</tr>
+<tr>
+<td>GraphReason (<a href="https://arxiv.org/abs/2308.09267" target="_blank" rel="noopener">2308.09267</a>)</td>
+<td>One model</td>
+<td>Yes: merges identical arithmetic expressions</td>
+<td>Answer</td>
+<td>No</td>
+<td>85.7 vs 85.4 for a voting verifier (GSM8K)</td>
+<td>Trained GIN; "slight" graph gain</td>
+</tr>
+<tr>
+<td>MArgE (<a href="https://arxiv.org/abs/2508.02584" target="_blank" rel="noopener">2508.02584</a>)</td>
+<td>3 small LLMs</td>
+<td>Argument trees, depth ≤ 2</td>
+<td>True/false via DF-QuAD</td>
+<td>No</td>
+<td>0.837 vs 0.724 MV (TruthfulClaim)</td>
+<td>Claim verification; GPT-4o-mini base scores; accuracy at a 0.5 threshold</td>
+</tr>
+<tr>
+<td>SCA (<a href="https://arxiv.org/abs/2605.19228" target="_blank" rel="noopener">2605.19228</a>)</td>
+<td>One model, 20 samples</td>
+<td>Yes: per-step similarity to "correct" set</td>
+<td>Step confidence</td>
+<td>Step AUROC 0.69–0.79 (trained GIBS)</td>
+<td>Up to +13.5% self-correction</td>
+<td>Needs gold or majority pseudo-labels; single model</td>
+</tr>
+<tr>
+<td>ESE / CoE / Hamidieh TU (<a href="https://arxiv.org/abs/2603.27098" target="_blank" rel="noopener">2603.27098</a>, <a href="https://arxiv.org/abs/2603.28360" target="_blank" rel="noopener">2603.28360</a>, <a href="https://arxiv.org/abs/2604.17112" target="_blank" rel="noopener">2604.17112</a>)</td>
+<td>Several models</td>
+<td>No</td>
+<td>Uncertainty</td>
+<td>AUROC</td>
+<td>0.772 vs 0.687; 0.72 vs 0.64</td>
+<td>Answer-level; no dependence correction</td>
+</tr>
+<tr>
+<td>Debate martingale (<a href="https://arxiv.org/abs/2508.17536" target="_blank" rel="noopener">2508.17536</a>, <a href="https://arxiv.org/abs/2601.19921" target="_blank" rel="noopener">2601.19921</a>)</td>
+<td>Mostly homogeneous</td>
+<td>No</td>
+<td>Theory, accuracy</td>
+<td>No</td>
+<td>MV explains most gains</td>
+<td>Theory of accuracy, not of confidence</td>
+</tr>
+<tr>
+<td>Free-MAD (<a href="https://arxiv.org/abs/2509.11035" target="_blank" rel="noopener">2509.11035</a>); Value of Variance (<a href="https://arxiv.org/abs/2602.07186" target="_blank" rel="noopener">2602.07186</a>)</td>
+<td>Heterogeneous</td>
+<td>Answer sequences only</td>
+<td>Answer; diagnostic</td>
+<td>No AUROC</td>
+<td>U_sys 0.67 (failures) vs 0.09 (successes) on GSM8K</td>
+<td>Hand-set weights; flips are ambiguous</td>
+</tr>
+<tr>
+<td>Learning to Trust the Crowd (<a href="https://arxiv.org/abs/2601.07245" target="_blank" rel="noopener">2601.07245</a>)</td>
+<td>3 open LLMs</td>
+<td>Engineered reasoning-quality features</td>
+<td>Answer and confidence</td>
+<td>Lower Brier</td>
+<td>+8.1 pp over MV</td>
+<td>Supervised GBDT/GAT on hand features; no step alignment</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Reasoning Consensus</strong> is the nearest work to the reader's idea (<a href="https://arxiv.org/abs/2607.27783" target="_blank" rel="noopener">Parulekar et al., 2026</a>). Its pipeline:</p>
+<ol>
+<li>Qwen2.5-32B turns each chain into a DAG of Planning, Fact, Reasoning and Conclusion nodes, joined by support and defeat bundles.</li>
+<li>Nodes of the same type are matched across traces and models when their all-mpnet cosine is at least 0.55 and an LLM judge says YES.</li>
+<li>Each merged node \(v\) gets weight \(W(v)=\max(0,\alpha^+\Phi^+-\alpha^-\Phi^-)\), where \(\alpha^\pm\) is the share of trace weight supporting or defeating \(v\) and \(\Phi^\pm\) are weakest-link bundle aggregates.</li>
+</ol>
+<p>Against a four-model majority vote, the accuracy-weighted ensemble scored 0.596 against 0.565 on MuSR-MM and 0.278 against 0.266 on GPQA-Diamond, and tied on FOLIO. The paper reports no AUROC or ECE. More fundamentally, it weights each step "by how many traces independently attest to it", which treats attestations as independent evidence. Section 7 shows that is exactly the overcount the reader observed with the log-odds sum.</p>
+<p><strong>DDRG</strong> builds a source-grounded dependency graph of at most 20 verbatim nodes per trace from the same 7–8B solver. It aligns claims across three traces and turns conflicts into disputes. Its macro accuracy over self-consistency rose from 72.09 to 72.74 for Qwen and from 66.17 to 66.58 for Llama, with a decline on FOLIO for Llama, and graph structure is never used as an uncertainty measure (<a href="https://arxiv.org/abs/2610.18606" target="_blank" rel="noopener">Liu et al., 2026</a>). Its most transferable idea is that only refutations reaching the majority answer's supporting path trigger repair. This matches the ReasoningFlow observation that "most of the erroneous steps are not used to derive final answers" (<a href="https://arxiv.org/abs/2606.05402" target="_blank" rel="noopener">Lee et al., 2026</a>).</p>
+<p><strong>LLMs as a Jury</strong> is the baseline that any trace method must beat at matched compute. Cross-model consensus on single solutions scored 96.6 on MATH-500 against 95.2 for self-consistency and 92.8 for Qwen2.5-Math-PRM-7B, and 35.9 against 33.3 and 29.3 on GPQA. The paper notes that the trained verifiers "read each candidate's full reasoning trace while the jury sees only final answers" (<a href="https://arxiv.org/abs/2607.10139" target="_blank" rel="noopener">Liu, 2026</a>). Its AIME numbers use 30 problems, and it is a single-author v3 preprint, so its numbers are preliminary.</p>
+<p>The latent-variable aggregators belong in the baseline column only:</p>
+<ul>
+<li>Weaver estimates verifier accuracies by weak supervision (<a href="https://arxiv.org/abs/2506.18203" target="_blank" rel="noopener">Saad-Falcon et al., 2025</a>).</li>
+<li>Smoothie treats embedding differences to an unobserved true output as Gaussian (<a href="https://arxiv.org/abs/2412.04692" target="_blank" rel="noopener">Guha et al., 2024</a>).</li>
+<li>Optimal Weight and Inverse Surprising Popularity assume answers are conditionally independent given a latent truth (<a href="https://arxiv.org/abs/2510.01499" target="_blank" rel="noopener">Ai et al., ICML 2026</a>).</li>
+<li>An Ising-model judge aggregator (<a href="https://arxiv.org/abs/2601.22336" target="_blank" rel="noopener">Balasubramanian et al., ICML 2026</a>).</li>
+</ul>
+<p>The notes' search found no 2026 work that does "multi-model step alignment to calibrated group confidence". That absence comes from about 25 searches and is not exhaustive. A focused check of ICLR 2027 submissions on OpenReview belongs in week one of any plan.</p>
+<h2 id="4-reasoning-graphs-add-a-few-points-and-only-when-support-is-counted-by-independent-routes">4. Reasoning graphs add a few points, and only when support is counted by independent routes</h2>
+<h3 id="three-ways-to-build-the-graph-with-very-different-costs">Three ways to build the graph, with very different costs</h3>
+<p>Step graphs are built in one of three ways.</p>
+<p>The first is <strong>prompting an LLM to parse</strong> the trace into typed steps and edges:</p>
+<ul>
+<li>LCoT2Tree uses one DeepSeek-v3 call per consecutive thought pair to label continuation, exploration, backtracking or validation (<a href="https://arxiv.org/abs/2505.22148" target="_blank" rel="noopener">Jiang et al., EMNLP 2025</a>).</li>
+<li>Mapping-the-Minds samples a signed adjacency matrix until its standard error falls below 0.05 (<a href="https://arxiv.org/abs/2505.13890" target="_blank" rel="noopener">Xiong et al., 2025</a>).</li>
+<li>PARC extracts premise DAGs with high premise recall on GSM8K: 97.55 for Llama-3.1-70B, 95.35 for Qwen-2.5-32B and 89.33 for Llama-3.1-8B (<a href="https://arxiv.org/abs/2502.02362" target="_blank" rel="noopener">Mukherjee et al., ICML 2025</a>).</li>
+<li>Topo-UQ reports that Phi-4 and Llama-3-8B "performed poorly on topology elicitation" (<a href="https://arxiv.org/abs/2502.17026" target="_blank" rel="noopener">Da et al., COLM 2025</a>).</li>
+</ul>
+<p>The second is <strong>pairwise entailment between units</strong> using an NLI (natural language inference) model, as in ROSCOE, KLE and Lin et al. MiniCheck shows that small fact-checkers reach GPT-4-level accuracy "for 400x lower cost" (<a href="https://arxiv.org/abs/2404.10774" target="_blank" rel="noopener">Tang et al., 2024</a>). The third is <strong>unsupervised clustering of hidden states or embeddings</strong>: Minegishi et al. K-means-cluster per-step hidden states and connect consecutive clusters (<a href="https://arxiv.org/abs/2506.05744" target="_blank" rel="noopener">Minegishi et al., NeurIPS 2025</a>). Text-level persistent homology is another option.</p>
+<p>The extraction step is fragile in documented ways. FActScore-style scores are "sensitive to the decomposition method used" (<a href="https://arxiv.org/abs/2403.11903" target="_blank" rel="noopener">Wanner et al., 2024</a>). Long chains "lack clear step boundaries" (<a href="https://arxiv.org/abs/2606.03969" target="_blank" rel="noopener">Gani et al., 2026</a>). Language-level discourse edges need not match the model's causal dependencies (<a href="https://arxiv.org/abs/2606.05402" target="_blank" rel="noopener">Lee et al., 2026</a>). An extracted graph is therefore a description of the argument, not of the computation. That is acceptable for a confidence signal, but the paper should say so.</p>
+<p>For the reader's tasks, node identity is easy on GSM8K, where intermediate numbers can be matched exactly and are already cached. It needs semantic alignment on CommonsenseQA, BoolQ, TruthfulQA and GPQA, through an embedding threshold confirmed by NLI. With six paths, up to five agents and five to ten steps per path, all-pairs step NLI is of order \(10^4\) pairs per question. That is simple arithmetic: cheap for DeBERTa- or MiniCheck-class models on an H200, and expensive with an LLM judge.</p>
+<h3 id="degree-centrality-is-self-consistency-and-the-measured-gains-above-it-are-modest">Degree centrality is self-consistency, and the measured gains above it are modest</h3>
+<p>Jiang et al. build a bipartite graph between sampled long-form generations and their extracted claims. They show that <strong>degree centrality is exactly self-consistency</strong> and that closeness centrality does better. AUROC rose from 0.812 to 0.843 on FactScore with GPT-4, from 0.801 to 0.857 with Llama-3, and from 0.744 to 0.786 on PopQA (<a href="https://arxiv.org/abs/2410.20783" target="_blank" rel="noopener">Jiang et al., NeurIPS 2024</a>). A 2026 comparison found plain claim–response entailment "performs better or on par with more complex claim-level scorers", graph centralities included (<a href="https://arxiv.org/abs/2602.17431" target="_blank" rel="noopener">Bouchard et al., TMLR 2026</a>). Learned graph predictors help a little and need labels:</p>
+<ul>
+<li>A GCN over 30 responses with one-hot cluster features reached Brier 0.136 and AUROC 0.864 on TriviaQA with Llama3-8B, against 0.842 for spectral features plus Platt scaling (<a href="https://arxiv.org/abs/2411.02454" target="_blank" rel="noopener">Li et al., 2024</a>).</li>
+<li>A GATv2 over reasoning trees, trained on about 1,600 labeled traces per dataset, classified correctness at 71–77% against 67–72% for a length baseline (<a href="https://arxiv.org/abs/2505.22148" target="_blank" rel="noopener">Jiang et al., EMNLP 2025</a>).</li>
+<li>On 347,496 traces, "text-based encoders achieve the best AUROC (0.672), while structurally-aware models yield the best ECE (0.148)", and added architectural complexity did not reliably help (<a href="https://arxiv.org/abs/2601.08134" target="_blank" rel="noopener">Khanmohammadi et al., EACL 2026</a>).</li>
+</ul>
+<p>The realistic effect sizes are therefore:</p>
+<ul>
+<li>+3 to +6 AUROC points for a better centrality over degree on claims;</li>
+<li>+0.3 to +0.65 accuracy points for cross-trace step graphs over voting when used for selection;</li>
+<li>the reader's own +0.8 AUARC on CommonsenseQA and BoolQ.</li>
+</ul>
+<p>Any proposed graph confidence must be reported as a gain over the degree (vote-share) baseline at equal samples.</p>
+<h3 id="the-shape-of-a-single-trace-is-weak-evidence-for-one-question">The shape of a single trace is weak evidence for one question</h3>
+<p>Single-trace topology has mostly aggregate support:</p>
+<ul>
+<li>Distilled reasoning models show "about 5" cycles per sample and about six times the small-world index of base models, but the paper reports no per-response correctness predictor (<a href="https://arxiv.org/abs/2506.05744" target="_blank" rel="noopener">Minegishi et al.</a>).</li>
+<li>Exploration density, branching and convergence ratios correlate with accuracy at about \(r=0.68\), but across models and prompting conditions rather than per instance (<a href="https://arxiv.org/abs/2505.13890" target="_blank" rel="noopener">Xiong et al.</a>).</li>
+<li>"Excessive and insufficient branching are both strongly associated with incorrect reasoning", so branching enters non-monotonically (<a href="https://arxiv.org/abs/2505.22148" target="_blank" rel="noopener">Jiang et al., EMNLP 2025</a>).</li>
+<li>Persistent-homology features of step embeddings explained alignment with expert AIME solutions better than graph metrics (\(R^2\) 0.236 against 0.064), but the target was alignment, not correctness (<a href="https://arxiv.org/abs/2510.20665" target="_blank" rel="noopener">Tan et al., 2025</a>).</li>
+</ul>
+<p>The cleanest topological fact is TOHA's: the H0 barcode of an attention graph equals a minimum-spanning-forest length (<a href="https://arxiv.org/abs/2504.10063" target="_blank" rel="noopener">Bazarova et al., ACL 2026</a>). The text-level analogue, the total H0 persistence of the step-embedding cloud that supports an answer, is a free dispersion scalar. Two warnings apply to heterogeneous ensembles. Embedding-based graph-consistency features showed the expected direction for Llama-2 but <strong>reversed sign for GPT-4, GPT-3.5 and Mistral-7B</strong> (<a href="https://arxiv.org/abs/2606.06748" target="_blank" rel="noopener">Shen, 2026</a>). Medoid selection over reasoning graphs <strong>hurt</strong> Llama-3.1-8B by 7.6 points on GSM8K (<a href="https://arxiv.org/abs/2607.08017" target="_blank" rel="noopener">Revalor et al., 2026</a>). Centrality can reward correlated errors. The fix that follows from Section 3 is to count distinct, independent supporters.</p>
+<h3 id="argumentation-semantics-give-a-monotone-graph-to-confidence-map-that-nobody-has-calibrated">Argumentation semantics give a monotone graph-to-confidence map that nobody has calibrated</h3>
+<p>A <strong>quantitative bipolar argumentation framework (QBAF)</strong> is a set of arguments, each with a base score \(\tau(v)\in[0,1]\), plus attack and support relations among them. A gradual semantics maps it to final strengths. <strong>DF-QuAD</strong> (discontinuity-free quantitative argumentation debate) is the semantics used by ArgLLMs and MArgE. Its usual statement, given here from the argumentation literature rather than from the notes, has two parts. Attackers and supporters are first aggregated by the probabilistic sum \(F(v_1,\dots,v_n)=1-\prod_i(1-v_i)\), with \(F(\emptyset)=0\). The strength is then</p>
+<div class="math-display">\[\sigma(v)=\begin{cases}\tau(v)-\tau(v)\,\big(v_a-v_s\big) &amp; v_a\ge v_s,\\[2pt] \tau(v)+\big(1-\tau(v)\big)\big(v_s-v_a\big) &amp; v_a&lt;v_s,\end{cases}\]</div>
+<p>where \(v_a\) and \(v_s\) are the aggregated strengths of the attackers and the supporters. It is computed recursively on acyclic graphs.</p>
+<p>ArgLLMs build depth-one or depth-two argument trees with LLM-assigned base scores and threshold the claim's strength at 0.5. Accuracy is "comparably with Chain-of-Thought": GPT-4o-mini on TruthfulClaim moved from 0.78 for direct prompting to 0.81. The construction satisfies base-score and relation contestability (<a href="https://arxiv.org/abs/2405.02079" target="_blank" rel="noopener">Freedman et al., AAAI 2025</a>). Direct prompting turned out to be the best base-score estimator (<a href="https://arxiv.org/abs/2510.02339" target="_blank" rel="noopener">Zhou et al., 2025</a>). MArgE merges argument trees from three small LLMs and beats their majority vote in accuracy (0.837 against 0.724 on TruthfulClaim) (<a href="https://arxiv.org/abs/2508.02584" target="_blank" rel="noopener">Ng et al., 2025</a>). Multi-agent QBAFs helped forecasting, "especially in the case of three agents" (<a href="https://arxiv.org/abs/2510.24303" target="_blank" rel="noopener">Gorur et al., AAMAS 2026</a>). <strong>No paper reports Brier, ECE or AUROC of QBAF strengths as a confidence.</strong> All published QBAFs here are trees of depth at most two, while cross-model support and attack graphs will contain cycles.</p>
+<p>The probabilistic sum \(F\) is the noisy-OR rule: the probability that at least one supporter "fires" when supporters act independently. That observation is this report's, not the notes'. It means two agents who restate the same step count twice, which is the same overcount as the log-odds sum. A dependence-aware DF-QuAD would therefore merge supporters that share atoms before aggregating them.</p>
+<h3 id="constraint-inference-and-conformal-filtering-are-ready-made-add-ons">Constraint inference and conformal filtering are ready-made add-ons</h3>
+<p>Several inference-time methods turn pairwise NLI relations into constrained optimization:</p>
+<ul>
+<li>ConCoRD solves a weighted MaxSAT factor graph and gains 5 points absolute on ConVQA (<a href="https://arxiv.org/abs/2211.11875" target="_blank" rel="noopener">Mitchell et al., 2022</a>).</li>
+<li>BIRD aligns a Bayesian network with abduced factors for "probability estimations that are 30% better" (<a href="https://arxiv.org/abs/2404.12494" target="_blank" rel="noopener">Feng et al., ICLR 2025</a>).</li>
+<li>Coherent factuality runs split conformal prediction over ancestor-closed subgraphs of a deducibility graph. With 50 calibration examples, it reached 90% factuality on MATH while retaining close to 80% of claims (<a href="https://arxiv.org/abs/2505.17126" target="_blank" rel="noopener">Rubin-Toles et al., ICLR 2025</a>).</li>
+</ul>
+<p>None pools heterogeneous models, and none evaluates the calibration of loopy belief-propagation marginals. A factor graph whose unary factors are per-agent confidences and whose pairwise factors are cross-model NLI relations is a direct transfer.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Graph quantity (training-free)</th>
+<th>Definition on the cross-model step graph</th>
+<th>Reduces to / nests</th>
+<th>Source of the idea</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model- or family-distinct support</td>
+<td>Number of distinct models (families) whose chains reach answer or atom \(v\)</td>
+<td>Vote count when each agent is its own family</td>
+<td><a href="https://arxiv.org/abs/2410.20783" target="_blank" rel="noopener">Jiang et al.</a>, dependence literature</td>
+</tr>
+<tr>
+<td>Closeness / PageRank of answer node</td>
+<td>Centrality in the step–answer bipartite graph</td>
+<td>Degree = self-consistency</td>
+<td><a href="https://arxiv.org/abs/2410.20783" target="_blank" rel="noopener">Jiang et al.</a></td>
+</tr>
+<tr>
+<td>Laplacian spectrum</td>
+<td>\(\sum_k\max(0,1-\lambda_k)\), Fiedler value, eccentricity</td>
+<td>Number of answer clusters</td>
+<td><a href="https://arxiv.org/abs/2305.19187" target="_blank" rel="noopener">Lin et al.</a></td>
+</tr>
+<tr>
+<td>Step-level heat-kernel entropy</td>
+<td>\(\mathrm{VNE}(e^{-tL})\) over all steps, globally and per answer subgraph</td>
+<td>SE under a block-diagonal kernel</td>
+<td><a href="https://arxiv.org/abs/2405.20003" target="_blank" rel="noopener">Nikitin et al.</a></td>
+</tr>
+<tr>
+<td>On-path contradiction mass</td>
+<td>NLI contradiction weight touching ancestors of the answer node</td>
+<td>Zero for unanimous, unchallenged chains</td>
+<td><a href="https://arxiv.org/abs/2610.18606" target="_blank" rel="noopener">DDRG</a>, <a href="https://arxiv.org/abs/2606.05402" target="_blank" rel="noopener">ReasoningFlow</a></td>
+</tr>
+<tr>
+<td>QBAF strength</td>
+<td>DF-QuAD with per-agent base scores, NLI supports and attacks</td>
+<td>Base score when there are no edges</td>
+<td><a href="https://arxiv.org/abs/2405.02079" target="_blank" rel="noopener">ArgLLMs</a>, <a href="https://arxiv.org/abs/2508.02584" target="_blank" rel="noopener">MArgE</a></td>
+</tr>
+<tr>
+<td>Factor-graph marginal</td>
+<td>Loopy-BP marginal of the answer variable</td>
+<td>Product of unaries without edges</td>
+<td><a href="https://arxiv.org/abs/2211.11875" target="_blank" rel="noopener">ConCoRD</a></td>
+</tr>
+<tr>
+<td>Coherent-support fraction</td>
+<td>Share of supporting steps whose ancestors are supported by another model</td>
+<td>Ancestor-closed coherent factuality</td>
+<td><a href="https://arxiv.org/abs/2505.17126" target="_blank" rel="noopener">Rubin-Toles et al.</a></td>
+</tr>
+<tr>
+<td>Structural dispersion</td>
+<td>Variance of pairwise graph edit distances across agents</td>
+<td>Topo-UQ across samples</td>
+<td><a href="https://arxiv.org/abs/2502.17026" target="_blank" rel="noopener">Da et al.</a></td>
+</tr>
+<tr>
+<td>H0 total persistence</td>
+<td>MST length of the supporting step-embedding cloud</td>
+<td>Single-linkage dispersion</td>
+<td><a href="https://arxiv.org/abs/2504.10063" target="_blank" rel="noopener">Bazarova et al.</a>, <a href="https://arxiv.org/abs/2510.20665" target="_blank" rel="noopener">Tan et al.</a></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="5-under-binary-rewards-a-value-function-is-a-correctness-probability-but-for-a-different-object">5. Under binary rewards a value function is a correctness probability, but for a different object</h2>
+<h3 id="orms-prms-and-the-three-probabilities-they-estimate">ORMs, PRMs and the three probabilities they estimate</h3>
+<p>An <strong>outcome reward model (ORM)</strong> is trained on final-answer correctness labels and estimates \(P(\text{final answer correct}\mid x,\tau)\) for a complete trace. Cobbe et al. introduced the idea with GSM8K and found that "6B verification slightly outperforms a finetuned 175B model" (<a href="https://arxiv.org/abs/2110.14168" target="_blank" rel="noopener">Cobbe et al., 2021</a>). A <strong>process reward model (PRM)</strong> scores each step, but the literature uses two different per-step targets.</p>
+<ul>
+<li><strong>Step correctness.</strong> Lightman et al. label steps by hand (PRM800K) and estimate \(P(\text{step } t\text{ correct}\mid\text{prefix})\). They score a solution by the product of step probabilities, "the probability that every step is correct". At best-of-1,860 on MATH, the PRM reached 78.2% against 72.4% for an ORM and 69.6% for majority voting. Product and minimum aggregation differed by under a point (78.2 against 77.6) (<a href="https://arxiv.org/abs/2305.20050" target="_blank" rel="noopener">Lightman et al., 2023</a>).</li>
+<li><strong>Monte Carlo value.</strong> Math-Shepherd and OmegaPRM label a step by whether sampled continuations from it reach the right answer. Their PRM therefore estimates a <strong>value</strong>, \(P(\text{final correct}\mid\text{prefix},\text{completion policy})\) (<a href="https://arxiv.org/abs/2312.08935" target="_blank" rel="noopener">Wang et al., 2023</a>; <a href="https://arxiv.org/abs/2406.06592" target="_blank" rel="noopener">Luo et al., 2024</a>). Snell et al. found that the last-step prediction worked best and attributed this to their soft Monte Carlo return labels (<a href="https://arxiv.org/abs/2408.03314" target="_blank" rel="noopener">Snell et al., 2024</a>).</li>
+</ul>
+<p>Qwen's PRM study found that Monte Carlo labels generalize worse than LLM-judge or human labels. It also found that "a significant proportion of minimum scores are concentrated on the final answer steps", which it reads as PRMs drifting from process to outcome assessment (<a href="https://arxiv.org/abs/2501.07301" target="_blank" rel="noopener">Zhang et al., 2025</a>).</p>
+<p>The three targets are worth writing side by side, because only one matches the reader's event:</p>
+<div class="math-display">\[\underbrace{P(\text{step } t \text{ correct}\mid x,s_{\le t})}_{\text{human-label PRM}},\qquad \underbrace{V^\pi(x,s_{\le t})=P(\text{final correct}\mid x,s_{\le t},\ \text{continue with }\pi)}_{\text{MC-label PRM, value}},\qquad \underbrace{P(\text{final correct}\mid x,\tau)}_{\text{ORM}}.\]</div>
+<p>The group confidence asks whether the final answer is correct. The ORM-style score, or the last-step score of a Monte Carlo PRM, is therefore the matching estimator. Product and minimum aggregation estimate the stricter event "every step is correct", and Lightman et al. note that the product is biased against longer solutions. Across studies, aggregation choices move best-of-N accuracy by roughly 0.5 to 4 points. No study evaluates min, product or last as calibrated probabilities with Brier or ECE.</p>
+<h3 id="value-functions-advantages-and-critics">Value functions, advantages and critics</h3>
+<p>Write the RL setting with a policy \(\pi\), prompt \(x\), sampled response \(y\sim\pi(\cdot\mid x)\) and binary reward \(r=\mathbf 1[\text{correct}]\). The value of the prompt is then exactly a probability of correctness:</p>
+<div class="math-display">\[V^\pi(x)\;=\;\mathbb E_{y\sim\pi}[r]\;=\;P_\pi(\text{correct}\mid x)\;=\;\sum_a P_\pi(a\mid x)\,\mathbf 1[a=a^\star].\]</div>
+<p>The advantage \(A=Q-V\) measures how much a specific action raised the probability of eventual success. <strong>PPO</strong> (proximal policy optimization) learns a critic \(V_\phi\) and estimates advantages with <strong>GAE</strong> (generalized advantage estimation), an exponentially weighted sum of temporal-difference errors, \(\hat A_t=\sum_{l\ge0}(\gamma\lambda)^l\delta_{t+l}\) with \(\delta_t=r_t+\gamma V_\phi(s_{t+1})-V_\phi(s_t)\) (<a href="https://arxiv.org/abs/1707.06347" target="_blank" rel="noopener">Schulman et al., 2017</a>; <a href="https://arxiv.org/abs/1506.02438" target="_blank" rel="noopener">Schulman et al., 2015</a>). On reasoning tasks, learned critics are poor. VinePPO found that PPO value networks "barely outperform a random baseline when comparing alternative steps". It replaced them with Monte Carlo values \(\hat V(s_t)=\tfrac1K\sum_kR(\eta_k)\) from \(K=9\) continuations (<a href="https://arxiv.org/abs/2410.01679" target="_blank" rel="noopener">Kazemnejad et al., ICML 2025</a>). Several works use or build value estimates directly:</p>
+<ul>
+<li><strong>Progress rewards.</strong> PAV argues that the right process reward is progress, a step-level advantage measured under a separate prover policy. It reports search that is more than 8% more accurate than ORM reranking (<a href="https://arxiv.org/abs/2410.08146" target="_blank" rel="noopener">Setlur et al., 2024</a>). Jia et al. show that "any policy's advantage function can serve as an optimal process reward model" and that outcome supervision is no harder statistically, up to polynomial factors (<a href="https://arxiv.org/abs/2502.10581" target="_blank" rel="noopener">Jia et al., 2025</a>).</li>
+<li><strong>Dedicated value models.</strong> Value-Guided Search trained a 1.5B token-level value model on 2.5M traces with about 3,072 H100-hours. It beat majority voting at \(N=256\) (45.7 against 39.7) but reported no calibration (<a href="https://arxiv.org/abs/2505.17373" target="_blank" rel="noopener">Wang et al., 2025</a>).</li>
+<li><strong>The critic as a confidence.</strong> A behaviorally calibrated RL study is the one verified case that treats the critic as a confidence. The final-token PPO value gave Conf-AUC 0.881 and smooth ECE 0.061 on BeyondAIME, against 0.786 and 0.560 for the PPO-only baseline, but degraded on SimpleQA transfer (smooth ECE 0.665) (<a href="https://arxiv.org/abs/2512.19920" target="_blank" rel="noopener">Wu et al., 2025</a>).</li>
+</ul>
+<h3 id="group-baselines-are-monte-carlo-estimates-of-the-value">Group baselines are Monte Carlo estimates of the value</h3>
+<p><strong>GRPO</strong> (group relative policy optimization) removes the critic. It samples \(G\) responses per prompt and normalizes each reward by the group's mean and standard deviation (<a href="https://arxiv.org/abs/2402.03300" target="_blank" rel="noopener">Shao et al., 2024</a>). With binary rewards, the group mean \(\hat p\) is a Monte Carlo estimate of \(V^\pi(x)\), and the advantage becomes</p>
+<div class="math-display">\[A_i=\frac{r_i-\hat p}{\sqrt{\hat p(1-\hat p)}}=\begin{cases}\sqrt{(1-\hat p)/\hat p} &amp; r_i=1,\\ -\sqrt{\hat p/(1-\hat p)} &amp; r_i=0,\end{cases}\]</div>
+<p>as Mroueh derives (<a href="https://arxiv.org/abs/2503.06639" target="_blank" rel="noopener">Mroueh, 2025</a>). Two simplifications remove parts of this:</p>
+<ul>
+<li><strong>Dr. GRPO</strong> drops the standard-deviation factor, calling it a "question-level difficulty bias", and keeps \(r_i-\bar r\) (<a href="https://arxiv.org/abs/2503.20783" target="_blank" rel="noopener">Liu et al., 2025</a>).</li>
+<li><strong>RLOO</strong> (REINFORCE leave-one-out) uses the mean of the other \(G-1\) rewards as the baseline, \(A_i=r_i-\tfrac1{G-1}\sum_{j\ne i}r_j\), which equals the Dr. GRPO advantage scaled by \(G/(G-1)\). Ahmadian et al. show that simple REINFORCE variants of this kind beat PPO in RLHF (<a href="https://arxiv.org/abs/2402.14740" target="_blank" rel="noopener">Ahmadian et al., 2024</a>).</li>
+</ul>
+<p>DAPO filters out groups whose accuracy is exactly 0 or 1 because their advantage is zero (<a href="https://arxiv.org/abs/2503.14476" target="_blank" rel="noopener">Yu et al., 2025</a>).</p>
+<h3 id="label-free-rl-rewards-are-confidences-without-labels-a-derivation">Label-free RL rewards are confidences without labels (a derivation)</h3>
+<p>Test-time RL (TTRL) makes the link exact. It takes the majority answer over sampled responses as a pseudo-label and rewards \(r_i=\mathbf 1[a_i=a_{\mathrm{maj}}]\) (<a href="https://arxiv.org/abs/2504.16084" target="_blank" rel="noopener">Zuo et al., 2025</a>). Its group mean is therefore</p>
+<div class="math-display">\[\bar r=\frac1G\sum_{i=1}^G\mathbf 1[a_i=a_{\mathrm{maj}}]=v(a_{\mathrm{maj}}),\]</div>
+<p>which is the self-consistency confidence of the majority answer. <strong>The label-free GRPO baseline is the majority-vote confidence, and the TTRL advantage is \((r_i-v)/\sqrt{v(1-v)}\).</strong> This identity is derived in the research notes; no source states it. It means that a group-confidence model \(c(q,\mathcal T,a)\) is structurally a label-free learned critic for the system's final answer, estimated from a set of traces instead of a prefix.</p>
+<p>TTRL works surprisingly well. On AIME 2024 with Qwen2.5-Math-7B, the pseudo-labels were only about 37% accurate, yet about 92% of rewards were correct, because a wrong majority label still assigns correct zero rewards to scattered wrong answers. Pass@1 rose from 12.9 to 40.2, but GPQA fell from 29.1 to 27.7. The other label-free rewards share the failure modes of uncalibrated confidence:</p>
+<ul>
+<li><strong>INTUITOR</strong> rewards self-certainty. Its frozen (offline) self-certainty annotator was hacked around update 100, while an online annotator stayed stable (<a href="https://arxiv.org/abs/2505.19590" target="_blank" rel="noopener">Zhao et al., ICLR 2026</a>).</li>
+<li><strong>Intrinsic-feedback rewards</strong> in general help early, but "performance degrades even below the model before training" (<a href="https://arxiv.org/abs/2506.17219" target="_blank" rel="noopener">Zhang et al., 2025</a>).</li>
+<li><strong>Majority-vote self-reward</strong> leads to "sudden and complete performance collapse" (<a href="https://arxiv.org/abs/2505.21444" target="_blank" rel="noopener">Shafayat et al., 2025</a>).</li>
+<li><strong>Cross-Model Entropy</strong> scores a response by its mean log-likelihood under a separate verifier model and argues that this "cannot be gamed through self-consistency" (<a href="https://arxiv.org/abs/2605.29009" target="_blank" rel="noopener">Gorbett et al., 2026</a>).</li>
+</ul>
+<h3 id="where-the-analogy-between-value-and-confidence-breaks">Where the analogy between value and confidence breaks</h3>
+<p>There are four breaks.</p>
+<ol>
+<li><strong>Different object.</strong> \(V^\pi(x)\) is an expectation over fresh samples, so it measures how hard the prompt is for the policy. It does not change with whichever answer happened to be produced. The group confidence \(c^\star=P(\hat a=a^\star\mid\mathcal T)\) is a posterior about one realized answer given the realized traces. A question the policy solves 60% of the time has \(V=0.6\) for every realization. After six unanimous paths, though, the confidence in that answer should be much higher than after a 3–3 split. The two coincide only in expectation for the correct answer, \(\mathbb E[v(a^\star)]=V^\pi(x)\).</li>
+<li><strong>Labels.</strong> \(\hat p\) needs ground-truth rewards; vote share does not.</li>
+<li><strong>The standard-deviation factor.</strong> \(1/\sqrt{\hat p(1-\hat p)}\) is a gradient weight, not a confidence, and Dr. GRPO argues it is a bias.</li>
+<li><strong>Policy-conditional PRM probabilities.</strong> A PRM's probability is defined relative to a completion policy, so off-the-shelf PRMs are miscalibrated for other generators. On AIME, Qwen2.5-Math-PRM-7B had Brier 0.19 to 0.41 depending on the generator. Quantile-regression calibration on 500 questions reduced this to 0.003–0.08, and overestimation accounted for nearly all of the error (<a href="https://arxiv.org/abs/2506.09338" target="_blank" rel="noopener">Park et al., NeurIPS 2025</a>).</li>
+</ol>
+<p>For a heterogeneous group, this means a single PRM needs a per-agent calibration map before its scores can be pooled.</p>
+<h3 id="verifiers-versus-voting-at-matched-compute">Verifiers versus voting at matched compute</h3>
+<p>Good in-domain verifiers beat majority voting when the number of candidates is matched. At matched compute, or with out-of-distribution generators, voting is usually as good or better:</p>
+<ul>
+<li>In Qwen's own comparison, only its two consensus-filtered PRMs beat maj@8 (66.2): PRM-7B scored 67.6 and PRM-72B 69.3. <strong>Nine of eleven open PRMs fell below majority voting</strong> (<a href="https://arxiv.org/abs/2501.07301" target="_blank" rel="noopener">Zhang et al., 2025</a>).</li>
+<li>A generative verifier "first matches SC after consuming up to 8x the inference compute" and needs 128 times the compute to beat it by 3.8% (<a href="https://arxiv.org/abs/2504.01005" target="_blank" rel="noopener">Singhi et al., COLM 2025</a>).</li>
+<li>PRMs "underperform simple baselines like majority voting" on DeepSeek-R1 and QwQ-32B (<a href="https://arxiv.org/abs/2505.11227" target="_blank" rel="noopener">Feng et al., NeurIPS 2025</a>).</li>
+<li>In the jury study, self-consistency beat Qwen2.5-Math-PRM-7B on MATH-500, 95.2 to 92.8, and ThinkPRM's AUROC fell to 0.57 on GPQA (<a href="https://arxiv.org/abs/2607.10139" target="_blank" rel="noopener">Liu, 2026</a>).</li>
+</ul>
+<p>Small open PRMs are almost entirely math-specific. The only plausible checkpoints for the reader's other tasks are VersaPRM (trained on MMLU-Pro) and FoVer (formal-verification labels with reported transfer to NLI and BBH) (<a href="https://arxiv.org/abs/2502.06737" target="_blank" rel="noopener">VersaPRM, 2025</a>; <a href="https://arxiv.org/abs/2505.15960" target="_blank" rel="noopener">Kamoi et al., ACL 2026 Findings</a>). The notes found no public PRM for commonsense, boolean or truthfulness QA. Verifier quality also depends on who generated the trace. Weak generators' errors are easier to detect (<a href="https://arxiv.org/abs/2509.17995" target="_blank" rel="noopener">Zhou et al., ICLR 2026</a>), and judges favour models similar to themselves (<a href="https://arxiv.org/abs/2502.04313" target="_blank" rel="noopener">Goel et al., 2025</a>; <a href="https://arxiv.org/abs/2404.13076" target="_blank" rel="noopener">Panickssery et al., 2024</a>).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Estimator</th>
+<th>Probability it estimates</th>
+<th>Labels needed</th>
+<th>Relation to group confidence \(c^\star\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ORM (<a href="https://arxiv.org/abs/2110.14168" target="_blank" rel="noopener">Cobbe et al.</a>)</td>
+<td>\(P(\text{final correct}\mid x,\tau)\) for one trace</td>
+<td>Outcome labels</td>
+<td>Right event, one trace at a time; needs pooling across agents</td>
+</tr>
+<tr>
+<td>Human-label PRM (<a href="https://arxiv.org/abs/2305.20050" target="_blank" rel="noopener">Lightman et al.</a>)</td>
+<td>\(P(\text{step correct}\mid\text{prefix})\); product = all steps correct</td>
+<td>Step labels</td>
+<td>Stricter event; length-biased</td>
+</tr>
+<tr>
+<td>MC-label PRM, value model (<a href="https://arxiv.org/abs/2312.08935" target="_blank" rel="noopener">Math-Shepherd</a>, <a href="https://arxiv.org/abs/2505.17373" target="_blank" rel="noopener">VGS</a>)</td>
+<td>\(V^\pi(\text{prefix})\)</td>
+<td>Outcome labels via rollouts</td>
+<td>Last step ≈ ORM; policy-conditional</td>
+</tr>
+<tr>
+<td>PPO critic (<a href="https://arxiv.org/abs/2512.19920" target="_blank" rel="noopener">Wu et al.</a>)</td>
+<td>\(V^\pi\) at final token</td>
+<td>Rewards during RL</td>
+<td>Usable as confidence in-domain; transfers poorly</td>
+</tr>
+<tr>
+<td>GRPO group mean (<a href="https://arxiv.org/abs/2503.06639" target="_blank" rel="noopener">Mroueh</a>)</td>
+<td>Monte Carlo estimate of \(V^\pi(x)\)</td>
+<td>Gold rewards</td>
+<td>Difficulty of the prompt, not confidence in an answer</td>
+</tr>
+<tr>
+<td>TTRL group mean (<a href="https://arxiv.org/abs/2504.16084" target="_blank" rel="noopener">Zuo et al.</a>)</td>
+<td>Vote share \(v(a_{\mathrm{maj}})\)</td>
+<td>None</td>
+<td>Equals majority-vote confidence (derived identity)</td>
+</tr>
+<tr>
+<td>Group confidence</td>
+<td>\(P(\hat a=a^\star\mid\mathcal T)\)</td>
+<td>Calibration labels at most</td>
+<td>The target; a label-free critic for the system's answer</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="6-a-small-group-verifier-needs-only-cross-entropy-and-rl-only-once-it-writes-its-own-analysis">6. A small group verifier needs only cross-entropy, and RL only once it writes its own analysis</h2>
+<h3 id="differentiable-objectives-cover-every-case-where-the-confidence-is-read-off-a-fixed-position">Differentiable objectives cover every case where the confidence is read off a fixed position</h3>
+<p>Suppose a small model reads the serialized traces and emits a confidence from a scalar head, or from the probability of a "Yes" token at a fixed position, \(c=P(\text{Yes})/(P(\text{Yes})+P(\text{No}))\), as in ThinkPRM's readout (<a href="https://arxiv.org/abs/2504.16828" target="_blank" rel="noopener">Khalifa et al., 2025</a>). Then the objective is ordinary supervised learning on labels \(y=\mathbf 1[\hat a=a^\star]\). Two standard losses apply, the binary cross-entropy \(\mathcal L_{\mathrm{BCE}}=-[y\log c+(1-y)\log(1-c)]\) and the Brier loss \((c-y)^2\). Both are differentiable and strictly proper. Verbalized confidence can be made differentiable too. ConfTuner's "tokenized Brier score" applies a softmax over confidence tokens \(0,\dots,N\) to get \(q\) and minimizes</p>
+<div class="math-display">\[\mathcal L_{\mathrm{ConfTuner}}=\sum_{i=0}^{N}q_i\Big(y-\frac iN\Big)^2 ,\]</div>
+<p>the expected Brier score under the model's own confidence distribution, which the authors prove proper. It converged with about 2,000 HotpotQA examples in about four minutes on four A40s and cut Llama-3.1-8B's ECE from 0.4803 to 0.0405 (<a href="https://arxiv.org/abs/2508.18847" target="_blank" rel="noopener">Li et al., NeurIPS 2025</a>). Related supervised recipes:</p>
+<ul>
+<li>Self-Calibration regresses \(P(\text{Yes})\) onto soft self-consistency targets with a SmoothL1 loss (<a href="https://arxiv.org/abs/2503.00031" target="_blank" rel="noopener">Huang et al., 2025</a>).</li>
+<li>Kapoor et al. found that "a thousand graded examples are sufficient". They also found that Mistral-7B estimating LLaMA-2-7B's correctness beats self-estimation in AUROC, which is direct evidence that <strong>one model can learn to judge another's outputs</strong> (<a href="https://arxiv.org/abs/2406.08391" target="_blank" rel="noopener">Kapoor et al., 2024</a>).</li>
+<li>APRICOT trains a DeBERTaV3 auxiliary model on question–answer pairs (<a href="https://arxiv.org/abs/2403.05973" target="_blank" rel="noopener">Ulmer et al., 2024</a>).</li>
+</ul>
+<p>The group answer is already fixed by the vote or the debate. The correctness term in any reward is therefore constant, and <strong>every strictly proper rule, Brier or log, is optimized by the calibrated posterior</strong>.</p>
+<h3 id="rl-is-needed-when-the-verifier-must-learn-the-analysis-it-writes-before-the-confidence">RL is needed when the verifier must learn the analysis it writes before the confidence</h3>
+<p>The case changes when the verifier first writes a free-text analysis \(z\) (cross-checking agents, locating a flawed step) and then states its confidence. Sampled text is discrete, so the quality of \(z\) can only be optimized by policy gradient or by rejection-sampling fine-tuning. RLCR rewards answer and confidence jointly:</p>
+<div class="math-display">\[R=\mathbf 1[y\equiv y^\star]-\big(q-\mathbf 1[y\equiv y^\star]\big)^2 .\]</div>
+<p>Its Theorem 1 shows that the expected reward is maximized at calibrated \(q\), and that among calibrated predictions the most-likely-correct answer scores best. The authors warn that log loss "is unbounded and can incentivize models to output incorrect answers" when the model also chooses the answer. On HotpotQA, plain RL with verifiable rewards (RLVR) gave AUROC 0.50 and ECE 0.37, while RLCR gave 0.69 and 0.03 at similar accuracy (<a href="https://arxiv.org/abs/2507.16806" target="_blank" rel="noopener">Damani et al., 2025</a>). Rewarding Doubt is the fixed-answer case. It optimizes only a confidence with a clipped log score through PPO, running about seven days on one A40 for Llama-3-8B, and reaches TriviaQA AUROC 0.8592 (<a href="https://arxiv.org/abs/2503.02623" target="_blank" rel="noopener">Bani-Harouni et al., 2025</a>).</p>
+<p>Three 2026 results describe the optimization landscape:</p>
+<ul>
+<li>RL on confidence stalls because off-the-shelf reasoning models' confidence prior is "heavily concentrated on a few high values", so an SFT stage should come first (<a href="https://arxiv.org/abs/2609.32470" target="_blank" rel="noopener">Wang et al., 2026</a>).</li>
+<li>A logistic AUC surrogate targets ranking directly (<a href="https://arxiv.org/abs/2604.12632" target="_blank" rel="noopener">Wang et al., ACL 2026</a>).</li>
+<li>SFT yields "substantially better calibration" than RLVR "even under distribution shift" (<a href="https://arxiv.org/abs/2601.13284" target="_blank" rel="noopener">Yaldiz et al., 2026</a>).</li>
+</ul>
+<h3 id="a-raoblackwellized-hybrid-estimator-a-derivation">A Rao–Blackwellized hybrid estimator (a derivation)</h3>
+<p>The research notes contain a derivation that removes most of RL's variance in the think-then-confide case. Given a sampled analysis \(z\), the expectation of RLCR's Brier term over the confidence token has a closed form:</p>
+<div class="math-display">\[B_\theta(z)\;=\;\mathbb E_{q\sim\pi_\theta(\cdot\mid z)}\big[(q-y)^2\big]\;=\;\sum_{i=0}^N\pi_\theta(i\mid z)\Big(\frac iN-y\Big)^2,\]</div>
+<p>which is exactly ConfTuner's loss. The objective \(J(\theta)=-\mathbb E_{z\sim\pi_\theta}[B_\theta(z)]\) then has gradient</p>
+<div class="math-display">\[\nabla_\theta J=-\,\mathbb E_{z}\big[B_\theta(z)\,\nabla_\theta\log\pi_\theta(z)\big]\;-\;\mathbb E_{z}\big[\nabla_\theta B_\theta(z)\big].\]</div>
+<p>The first term is a policy gradient on the analysis whose reward is an exact conditional expectation, with no sampling noise from the confidence token. The second is ordinary backpropagation through the confidence distribution. This is Rao–Blackwellization: replacing a sampled quantity by its conditional expectation cannot increase variance. It also sidesteps the concentrated-prior exploration problem, because the confidence token is never sampled during training. No paper in the notes implements it, so it should be presented as this project's estimator.</p>
+<h3 id="what-the-evidence-says-about-sft-versus-rl">What the evidence says about SFT versus RL</h3>
+<p>The comparisons are close in-domain and favour RL mainly out of distribution and at larger scale:</p>
+<ul>
+<li>For the RL-trained Sample Set Aggregator, SFT was slightly better at 0.5B (51.17 against 49.81), but RL was much better at 3B (55.22 against 48.12) (<a href="https://arxiv.org/abs/2506.09014" target="_blank" rel="noopener">Qi et al., 2025</a>).</li>
+<li>Supervised classifiers on RLVR outputs came close to RLCR. A BCE classifier reached AUROC 0.66, Brier 0.22 and ECE 0.07, against RLCR's 0.69, 0.21 and 0.03 (<a href="https://arxiv.org/abs/2507.16806" target="_blank" rel="noopener">Damani et al., 2025</a>).</li>
+<li>Rewarding Doubt's supervised probe had lower in-domain ECE, while RL transferred better, for example to CommonsenseQA (AUROC 0.6385 against 0.5374).</li>
+<li>Supervised fine-tuning on scalar confidence labels alone "suffices to elicit self-verification behavior" (<a href="https://arxiv.org/abs/2506.03723" target="_blank" rel="noopener">Jang et al., 2025</a>).</li>
+</ul>
+<p>The prediction for this project is that a BCE-trained P(yes) verifier will match an RL verifier in-domain. RL earns its cost only if the analysis-first variant at 3B or more transfers better across tasks or agent families. Either outcome is reportable.</p>
+<h3 id="existing-trained-aggregators-output-answers-not-group-confidences">Existing trained aggregators output answers, not group confidences</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Regime</th>
+<th>Reads</th>
+<th>Output</th>
+<th>Reported result</th>
+<th>Why it is not the target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SSA (<a href="https://arxiv.org/abs/2506.09014" target="_blank" rel="noopener">Qi et al.</a>)</td>
+<td>RL (GRPO), 0.5–3B</td>
+<td>5 concatenated samples from one model</td>
+<td>Answer</td>
+<td>SSA-3B 56.13 vs maj 49.67, PRM-72B 53.40 (5-benchmark avg)</td>
+<td>No confidence; "very small" gain on TruthfulQA; weaker on other families</td>
+</tr>
+<tr>
+<td>AggLM (<a href="https://arxiv.org/abs/2509.06870" target="_blank" rel="noopener">Zhao et al.</a>)</td>
+<td>RL, Qwen3-1.7B</td>
+<td>8 candidates</td>
+<td>Answer</td>
+<td>AIME25 50.00 vs maj 45.89</td>
+<td>Same family; no confidence</td>
+</tr>
+<tr>
+<td>GenSelect (<a href="https://arxiv.org/abs/2507.17797" target="_blank" rel="noopener">Toshniwal et al.</a>)</td>
+<td>Prompting</td>
+<td>N candidates, knockout</td>
+<td>Answer</td>
+<td>QwQ 72.1–73.4 vs Maj@64 68.4</td>
+<td>No confidence</td>
+</tr>
+<tr>
+<td>Heimdall (<a href="https://arxiv.org/abs/2504.10337" target="_blank" rel="noopener">Shi et al.</a>)</td>
+<td>RL verifier</td>
+<td>One solution</td>
+<td>Verdict, pessimistic score</td>
+<td>AIME25 54.2% → 70.0% at 16× compute</td>
+<td>Single generator</td>
+</tr>
+<tr>
+<td>APRICOT (<a href="https://arxiv.org/abs/2403.05973" target="_blank" rel="noopener">Ulmer et al.</a>), Kapoor (<a href="https://arxiv.org/abs/2406.08391" target="_blank" rel="noopener">2406.08391</a>)</td>
+<td>SFT</td>
+<td>One answer (± CoT)</td>
+<td>Confidence</td>
+<td>TriviaQA AUROC .83 (APRICOT)</td>
+<td>One answer, one model</td>
+</tr>
+<tr>
+<td>Self-Calibration (<a href="https://arxiv.org/abs/2503.00031" target="_blank" rel="noopener">Huang et al.</a>)</td>
+<td>SFT</td>
+<td>(x, y)</td>
+<td>P(Yes)</td>
+<td>GSM8K ECE 13.70 → 3.79</td>
+<td>One model's own answers</td>
+</tr>
+<tr>
+<td>NeuralConf (<a href="https://arxiv.org/abs/2605.16824" target="_blank" rel="noopener">Liu et al.</a>)</td>
+<td>LL</td>
+<td>Token-confidence trajectory</td>
+<td>Trace weight</td>
+<td>Beats MV and tail confidence</td>
+<td>Content-agnostic, one model</td>
+</tr>
+<tr>
+<td>Weaver (<a href="https://arxiv.org/abs/2506.18203" target="_blank" rel="noopener">Saad-Falcon et al.</a>)</td>
+<td>Weak supervision + 400M distillation</td>
+<td>Verifier scores</td>
+<td>Selection score</td>
+<td>87.7 vs MV 72.2</td>
+<td>Latent-variable reliabilities (baseline only); one generator</td>
+</tr>
+<tr>
+<td>Learning to Trust the Crowd (<a href="https://arxiv.org/abs/2601.07245" target="_blank" rel="noopener">Kallem</a>)</td>
+<td>GBDT/GAT</td>
+<td>Engineered agreement and quality features, 3 LLMs</td>
+<td>Answer + confidence</td>
+<td>+8.1 pp over MV, lower Brier</td>
+<td>Features, not traces</td>
+</tr>
+<tr>
+<td>MAPoRL verifier (<a href="https://arxiv.org/abs/2502.18439" target="_blank" rel="noopener">Park et al.</a>)</td>
+<td>Trained</td>
+<td>Answers and discussion</td>
+<td>RL reward</td>
+<td>Verifier details not readable</td>
+<td>Calibration not reported</td>
+</tr>
+</tbody>
+</table></div>
+<p>Heimdall's pessimistic-verification score, \(r(a)-\alpha\ln(NM)/(N_aM+1)\), already behaves like a group confidence: a verifier-weighted vote share with an upper-confidence-bound-style penalty on thin support (\(N_a\) is the answer's support count). Every trained aggregator here either reads samples from one family or outputs an answer rather than a calibrated probability. <strong>No verified work trains a model to read heterogeneous multi-agent vote or debate traces and output a calibrated group confidence evaluated with AUROC, AUARC and Brier.</strong></p>
+<p>Costs are modest:</p>
+<ul>
+<li>Supervised confidence heads on 1.5B–8B models take minutes to a few GPU-days: ConfTuner about four minutes, ThinkPRM about 1.5 hours for 14B with LoRA on one A100, Kapoor et al. one to three GPU-days per run.</li>
+<li>RL aggregators at 0.5–3B fit on one eight-GPU H100 node (SSA).</li>
+<li>Large value models are the outlier, at about 3,072 H100-hours for Value-Guided Search.</li>
+</ul>
+<p>The main engineering cost is context. Five agents times six paths is 30 traces, against five for SSA and eight for AggLM. Serializing one representative path per answer cluster, or serializing the step graph itself, keeps inputs short.</p>
+<h2 id="7-pooling-theory-already-says-shared-evidence-counts-once-five-candidate-theorems-make-that-trace-specific">7. Pooling theory already says shared evidence counts once; five candidate theorems make that trace-specific</h2>
+<h3 id="exact-bayesian-pooling-deflates-shared-evidence">Exact Bayesian pooling deflates shared evidence</h3>
+<p>Write \(L(p)=\log\frac p{1-p}\), let \(p_0\) be the base rate, and let \(x_i=L(p_i)-L(p_0)\) be agent \(i\)'s evidence on the log-odds scale. Three classical results fix the endpoints.</p>
+<ul>
+<li><strong>Shared evidence, different priors.</strong> If group members share a common likelihood and want pooling to commute with Bayesian updating, the logarithmic pool \(\propto\prod_if_i^{w_i}\) with \(\sum_iw_i=1\) is the only externally Bayesian rule (<a href="https://doi.org/10.1214/aos/1176346726" target="_blank" rel="noopener">Genest, 1984</a>). On the log-odds scale this is a weighted mean of log-odds.</li>
+<li><strong>Independent evidence, common prior.</strong> If the agents' private evidence is independent given each hypothesis, the Bayesian group posterior is \(\pi\propto\prod_i\pi_i/p^{\,n-1}\), so the evidence terms add: \(L(\pi)=L(p_0)+\sum_ix_i\) (<a href="https://doi.org/10.1007/s00355-010-0453-x" target="_blank" rel="noopener">Dietrich, 2010</a>).</li>
+<li><strong>Arbitrary overlap.</strong> For general overlap, Dietrich's Section 8 merges subgroups recursively by \(\pi_{A,B}\propto\pi_A\pi_B/\pi_{\mathrm{shared}(A,B)}\). The opinion based only on shared information plays the role of the prior and is divided out once.</li>
+</ul>
+<p>Satopää, Pemantle and Ungar's Gaussian partial-information model makes the middle ground quantitative. Forecaster \(i\) observes a set \(B_i\) of an information space, and the covariance between forecasters is the overlap \(|B_i\cap B_j|\). In the symmetric case, with each forecaster seeing \(\delta\) and each pair sharing \(\lambda\delta\), the optimal aggregate on the probit scale is</p>
+<div class="math-display">\[p''=\Phi\!\left(\frac{\frac{1}{1+(N-1)\lambda}\sum_iX_i}{\sqrt{1-\frac{N\delta}{1+(N-1)\lambda}}}\right),\qquad X_i=\Phi^{-1}(p_i)\sqrt{1-\delta}.\]</div>
+<p>The evidence sum is deflated by the classic design effect \(1+(N-1)\lambda\), so <strong>the effective number of forecasters is \(N_{\mathrm{eff}}=N/(1+(N-1)\lambda)\)</strong>, and the aggregate can leave the convex hull of the individual forecasts (<a href="https://arxiv.org/abs/1406.2148" target="_blank" rel="noopener">Satopää et al., 2016</a>). The authors note that the overlap matrix is not identified from a single prediction per forecaster. Lichtendahl et al. show that optimal Bayesian ensembles are generalized additive models, that extremizing should be measured relative to the base rate, and that they <em>anti</em>-extremize in 18–73% of cases (<a href="https://doi.org/10.1287/opre.2021.2176" target="_blank" rel="noopener">Lichtendahl et al., 2022</a>). A 2026 note summarizes the situation: averaging is right for alternative interpretations, multiplying odds is right for conditionally independent evidence with a common prior, and "probabilities of alternative successful derivations require their dependence or shared evidence to be taken into account" (<a href="https://arxiv.org/abs/2608.11275" target="_blank" rel="noopener">Tammet et al., 2026</a>).</p>
+<p>The reader's log-odds sum is the zero-overlap rule applied to agents whose overlap is positive. Its overcount is the \(\lambda&gt;0\) regime of this model. The correct pool lies strictly between the mean of log-odds and the sum, at a point set by the overlap.</p>
+<h3 id="without-structural-information-no-aggregator-has-a-useful-guarantee">Without structural information, no aggregator has a useful guarantee</h3>
+<p>Robust aggregation explains why the overlap must be measured rather than assumed:</p>
+<ul>
+<li>With many experts receiving conditionally i.i.d. signals, "no scheme performs (asymptotically) better than a (0.5,0.5) forecast" (<a href="https://doi.org/10.1073/pnas.1813934115" target="_blank" rel="noopener">Arieli et al., 2018</a>).</li>
+<li>Neyman and Roughgarden prove four results (<a href="https://arxiv.org/abs/2111.03153" target="_blank" rel="noopener">Neyman and Roughgarden</a>). Under weak substitutes, no strategy beats the approximation ratio \(1/k\) that following a random expert already achieves. Under projective substitutes, the plain average reaches about \(1.866/k\), and average-then-extremize about \(2.598/k\). Any constant extremization factor is capped at \(4k/(k+1)^2\) on one of the independent or fully dependent structures.</li>
+<li>For general information structures, the minimax regret is 0.25 and is achieved by the constant forecast 1/2 (<a href="https://arxiv.org/abs/2604.24517" target="_blank" rel="noopener">Chen, Peng and Tang, 2026</a>).</li>
+<li>Frongillo et al. show that, in the partial-information model, \(n\) "difference queries" \(Q_i=\mathbb E[Y\mid S_i\setminus\cup_{j&lt;i}S_j]\) recover the full-information forecast exactly, while \(d&lt;n\) queries leave worst-case error \(1-d/n\) (<a href="https://arxiv.org/abs/2512.05271" target="_blank" rel="noopener">Frongillo et al., 2025</a>).</li>
+</ul>
+<p>Read together, these results say that the information structure must be estimated per question. Traces are the obvious per-question source, and re-prompting a model with a subset of steps is the LLM analogue of a difference query.</p>
+<h3 id="dependent-juries-have-ceilings">Dependent juries have ceilings</h3>
+<p>Jury theorems with dependence give the same ceiling. Under exchangeable votes, de Finetti's theorem makes the voters independent given a common random competence, which "can be interpreted as representing a common information source" (<a href="https://doi.org/10.1007/bf00187434" target="_blank" rel="noopener">Ladha, 1993</a>, as summarized by Pivato). Dietrich and Spiekermann's competence-sensitive jury theorem shows that majority reliability converges to a value below 1: "the group cannot beat the facts" (<a href="https://doi.org/10.1017/s0266267113000096" target="_blank" rel="noopener">Dietrich and Spiekermann, 2013</a>). They also show that state-conditional independence fails whenever there are common causes besides the state (<a href="https://doi.org/10.1093/mind/fzt074" target="_blank" rel="noopener">Mind, 2013</a>). For committees of AI agents, "shared errors create a positive asymptotic error floor for majority voting" (<a href="https://arxiv.org/abs/2607.23931" target="_blank" rel="noopener">Li and Hai, 2026</a>). An Ising-model treatment shows that the Bayes log-odds becomes quadratic in votes under class-dependent couplings, and that conditional-independence methods "remain strictly suboptimal as the number of judges grows" (<a href="https://arxiv.org/abs/2601.22336" target="_blank" rel="noopener">Balasubramanian et al., ICML 2026</a>). That is a latent-truth aggregator and belongs among the baselines, but its quadratic form is the right shape for a dependence correction tied to observable step overlap.</p>
+<p>Second-order mechanisms are the classical training-free way to split shared from private information within one question:</p>
+<ul>
+<li>The surprisingly popular answer is the one more popular than respondents predict (<a href="https://doi.org/10.1038/nature21054" target="_blank" rel="noopener">Prelec et al., 2017</a>).</li>
+<li>Pivoting uses each respondent's guess of the average forecast (<a href="https://doi.org/10.1287/mnsc.2018.3047" target="_blank" rel="noopener">Palley and Soll, 2019</a>).</li>
+</ul>
+<p>For LLMs, Ai et al. prove that Inverse Surprising Popularity ≥ majority vote ≥ surprisingly popular, but only under conditional independence given the truth (<a href="https://arxiv.org/abs/2510.01499" target="_blank" rel="noopener">Ai et al., ICML 2026</a>). Polling and SP aggregation gave no consistent gain on LLMs (<a href="https://arxiv.org/abs/2603.06612" target="_blank" rel="noopener">Denisov-Blanch et al., 2026</a>). These are baselines and possible extensions, not the core.</p>
+<h3 id="debate-theory-martingales-without-asymmetry-amplification-with-it">Debate theory: martingales without asymmetry, amplification with it</h3>
+<p>Choi et al.'s martingale holds when updates are symmetric in correctness and a neighbour-average condition holds, as for homogeneous fully connected agents (<a href="https://arxiv.org/abs/2508.17536" target="_blank" rel="noopener">Choi et al., 2025</a>). Hu et al. prove that debate beats the initial majority vote under "true concept predictiveness" and independent responses, which is an asymmetry assumption (<a href="https://arxiv.org/abs/2510.12697" target="_blank" rel="noopener">Hu et al., 2025</a>). Estornell and Liu prove that expected final correctness decreases monotonically in the number of agents who share a misconception (<a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/32e07a110c6c6acf1afbf2bf82b614ad-Paper-Conference.pdf" target="_blank" rel="noopener">Estornell and Liu, 2024</a>). Okawa predicts a phase transition to collective bias above a conformity threshold, which heterogeneity smooths (<a href="https://arxiv.org/abs/2608.02827" target="_blank" rel="noopener">Okawa, ICML 2026</a>). These results do not contradict each other. The reader's finding that correct answers are sticky is a measured correctness asymmetry in switching. That asymmetry is exactly what makes a trajectory carry evidence beyond round 0 (Candidate 3 below).</p>
+<h3 id="guarantees-that-survive-arbitrary-within-question-dependence">Guarantees that survive arbitrary within-question dependence</h3>
+<p>Merging rules exist that stay valid under any dependence among sources:</p>
+<ul>
+<li>An <strong>e-value</strong> is a nonnegative statistic \(E\) with \(\mathbb E_{H_0}[E]\le1\), so \(P_{H_0}(E\ge1/\alpha)\le\alpha\) by Markov's inequality. Averaging e-values is valid under arbitrary dependence, and multiplying them is valid under independence (<a href="https://doi.org/10.1214/20-aos2020" target="_blank" rel="noopener">Vovk and Wang, 2021</a>).</li>
+<li>Arbitrarily dependent p-values can be averaged after scaling by a factor of 2, and no smaller factor works in general (<a href="https://doi.org/10.1093/biomet/asaa027" target="_blank" rel="noopener">Vovk and Wang, 2020</a>).</li>
+<li>The majority vote of \(K\) arbitrarily dependent \(1-\alpha\) prediction sets has coverage at least \(1-2\alpha\) (<a href="https://arxiv.org/abs/2401.09379" target="_blank" rel="noopener">Gasparin and Ramdas, 2024</a>).</li>
+</ul>
+<p>Split-conformal prediction, Learn-then-Test (LTT) and conformal risk control (CRC) turn any score into a selective-answer rule with finite-sample error control from a labeled calibration split (<a href="https://arxiv.org/abs/2110.01052" target="_blank" rel="noopener">Angelopoulos et al., 2021</a>; <a href="https://arxiv.org/abs/2208.02814" target="_blank" rel="noopener">Angelopoulos et al., 2022</a>). Because the exchangeable unit is the question, dependence among agents within a question does not affect validity. The real threat is a protocol shift at test time: coverage "falls from a calibrated 90% to 74% under unanimous-wrong peers" (<a href="https://arxiv.org/abs/2609.04445" target="_blank" rel="noopener">Hu and Su, 2026</a>).</p>
+<h3 id="five-candidate-theorems-proposals-from-the-research-notes-not-literature">Five candidate theorems (proposals from the research notes, not literature)</h3>
+<p>The following statements were formulated in the research notes as extensions of the verified results above. They are proposals to be proved, not published theorems. Common notation: \(H\) is the event "candidate \(a\) is correct". Step matching maps agent \(i\)'s traces to a set \(S_i\) of <strong>evidence atoms</strong>, meaning canonicalized premises, intermediate results or sub-derivations. Each atom \(e\) has log-likelihood ratio \(\ell(e)=\log P(e\mid H)/P(e\mid\neg H)\), and \(p_U=P(H\mid U)\) for a set of atoms \(U\).</p>
+<p><strong>Candidate 1: inclusion–exclusion log-odds pooling over shared reasoning.</strong> It rests on three assumptions:</p>
+<ul>
+<li>(A1) Atoms are mutually independent given \(H\) and given \(\neg H\). This is Dietrich's independence assumption moved from persons to atoms.</li>
+<li>(A2) Each agent is calibrated to its own atoms: \(p_i=p_{S_i}\), which in practice means per-agent recalibration.</li>
+<li>(A3) Subset confidences \(p_U\) can be obtained by re-prompting a fixed model with only the steps in \(U\).</li>
+</ul>
+<p>Under these, the exact Bayes posterior is</p>
+<div class="math-display">\[L\Big(P\big(H\mid \textstyle\bigcup_iS_i\big)\Big)=L(p_0)+\sum_{\emptyset\ne M\subseteq[m]}(-1)^{|M|+1}\big[L(p_{U_M})-L(p_0)\big],\qquad U_M=\textstyle\bigcap_{i\in M}S_i .\]</div>
+<p>Equivalently, it has a difference form that needs only \(m\) queries, with \(D_i=S_i\setminus\bigcup_{j&lt;i}S_j\). The independent pool \(L(p_0)+\sum_i[L(p_i)-L(p_0)]\) then exceeds the Bayes log-odds by exactly</p>
+<div class="math-display">\[\sum_{e}\big(c(e)-1\big)\,\ell(e),\qquad c(e)=\#\{i:e\in S_i\},\]</div>
+<p>so it is exact if and only if the agents' atom sets are disjoint, and the linear pool is exact only when they coincide. The theorem also gives a synergy statement: two agreeing agents raise confidence above both of their individual confidences if and only if both private parts carry positive evidence. If \(S_1=S_2\), their agreement adds nothing. The proof is that, under (A1), \(U\mapsto L(p_U)-L(p_0)=\sum_{e\in U}\ell(e)\) is additive, so the formula is inclusion–exclusion for the indicator of a union. What would make this a real theorem rather than an identity:</p>
+<ul>
+<li>a DAG refinement in which deterministically derived steps contribute \(\ell=0\), via d-separation;</li>
+<li>an Ising-type robustness bound when (A1) holds only up to pairwise dependence, with error controlled by the summed pairwise conditional mutual information;</li>
+<li>a bound on the error of the difference form when the re-prompted \(p_U\) are themselves miscalibrated.</li>
+</ul>
+<p><strong>Candidate 2: a trace-identified partial-information aggregator.</strong> It adopts Satopää's Gaussian model and assumes (B1) an additive measure \(w\) on atoms such that \(\delta_i=w(S_i)\) and \(\rho_{ij}=w(S_i\cap S_j)\). The trace-overlap matrix is then the forecast covariance \(\Sigma_{22}\), which Satopää could not identify from single-event forecasts but which traces identify per question. The proposed new results are:</p>
+<ul>
+<li>With \(\lVert\hat\Sigma_{22}-\Sigma_{22}\rVert_{\mathrm{op}}\le\varepsilon&lt;\kappa=\lambda_{\min}(\Sigma_{22})\), the plug-in aggregate's excess Brier or log loss is \(O(\varepsilon/\kappa)\).</li>
+<li>The trace-adaptive aggregator attains approximation ratio 1 on both the independent and the fully dependent structures. By Neyman and Roughgarden's Theorem 4.2, any constant-factor extremizer is capped at \(4k/(k+1)^2\) on one of them. This quantifies the value of observing traces over observing forecasts only.</li>
+</ul>
+<p><strong>Candidate 3: correctness-asymmetric debate dynamics.</strong> Reduce to \(a\) versus \(\neg a\). Assume (C1) that switching hazards depend only on whether an agent's current answer is correct and on its exposure \(k\), the number of disagreeing peers: \(h_c(k)\) if correct and \(h_w(k)\) if wrong. Assume also (C2) that switch decisions within a round are independent given \(H\) and the history. Then</p>
+<div class="math-display">\[L\big(P(H\mid Y^{0:R})\big)=L\big(P(H\mid Y^0)\big)+\sum_{r&lt;R}\sum_i\lambda_i^r .\]</div>
+<p>The increments are:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Agent at round \(r\)</th>
+<th>Stays</th>
+<th>Switches</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Holding \(a\)</td>
+<td>\(\lambda=\log\dfrac{1-h_c(k)}{1-h_w(k)}\)</td>
+<td>\(\lambda=\log\dfrac{h_c(k)}{h_w(k)}\) (leaves \(a\))</td>
+</tr>
+<tr>
+<td>Holding \(\neg a\)</td>
+<td>\(\lambda=\log\dfrac{1-h_w(k)}{1-h_c(k)}\)</td>
+<td>\(\lambda=\log\dfrac{h_w(k)}{h_c(k)}\) (moves to \(a\))</td>
+</tr>
+</tbody>
+</table></div>
+<p>If \(h_c\equiv h_w\), the trajectory is ancillary and \(P(H\mid Y^{0:R})=P(H\mid Y^0)\). This is the aggregator-level counterpart of Choi et al.'s martingale. If \(h_w(k)&gt;h_c(k)\) at some exposure visited with positive probability, the expected log-score gain over round 0 equals \(I(H;Y^{1:R}\mid Y^0)&gt;0\). Stay/leave counts by exposure are sufficient statistics, so only \(2\times|\text{exposure levels}|\) hazards need fitting on a calibration split. The key risk is (C2), because agents read the same transcript. An exchangeable relaxation with a per-question persuasiveness variable should preserve the no-information result.</p>
+<p><strong>Candidate 4: a saturation theorem.</strong> Let \(C=\sum_jZ_j\) count the \(N=mk\) sampled answers equal to \(a\). Assume (D1) that the votes are exchangeable given \(H\) and given \(\neg H\), and (D2) that the likelihood ratio is monotone in \(C\). Then \(C\) is sufficient, and every pool that is a strictly increasing function of \(C\) has the Bayes ROC curve. That covers mean vote share, majority margin, log-odds of the vote fraction and beta-transformed vote share, which therefore share AUROC and AUARC and differ only in calibration. If the exchangeable sequence is extendable, de Finetti's theorem gives a common-cause ceiling: \(g(C)\to P(H\mid\theta=C/N)\), bounded away from 0 and 1. The log-odds sum is then asymptotically overconfident. Breaking saturation requires statistics not measurable in \(C\). With heterogeneous agents independent given \(H\), the sufficient statistic is the vector of per-agent counts, and the Bayes pool is \(L(p_0)+\sum_i\log\frac{P_{H,i}(C_i)}{P_{\neg H,i}(C_i)}\). With one vote per agent, this reduces to Nitzan–Paroush and Ai et al.'s logit-accuracy weights. Beyond that, only trace-overlap structure or within-path confidences can help. The theorem predicts both of the reader's observations: pooling statistics saturate, and step matching helps only insofar as it breaks exchangeability.</p>
+<p><strong>Candidate 5: a dependence hierarchy with distribution-free validity.</strong> Let each agent supply an e-value \(E_i\) for the null "a is wrong". Partition agents into blocks \(G_1,\dots,G_B\), for example connected components of the trace-overlap graph, and assume the blocks are independent under the null. Then</p>
+<div class="math-display">\[E^\ast=\prod_{b=1}^B\frac1{|G_b|}\sum_{i\in G_b}E_i\]</div>
+<p>is an e-variable. One block gives the arithmetic mean, the analogue of the linear pool, which is valid under any dependence. Singleton blocks give the product, the analogue of the log-odds sum, which is valid under independence. Any score from Candidates 1–4, thresholded by LTT or CRC on exchangeable calibration questions, controls selective error at level \(\alpha\) regardless of within-question dependence. Admissibility of the block-average product is left to prove.</p>
+<h3 id="four-further-derivations-used-in-this-report-two-from-the-notes-two-new">Four further derivations used in this report (two from the notes, two new)</h3>
+<p><strong>D1, the TTRL identity</strong>, comes from the notes and was stated in Section 5: the TTRL group baseline equals the majority-vote confidence.</p>
+<p><strong>D2, reward bias bounded by excess Brier</strong>, is new here. Suppose a policy-gradient step for agent \(i\) uses a confidence \(c(a_i)\) in place of the unknown reward \(R_i=\mathbf 1[a_i=a^\star]\). Let \(c^\star(a_i)=P(R_i=1\mid\mathcal T)\) be the exact posterior, and let \(g=\nabla\log\pi(\tau_i)\), which is a function of \(\mathcal T\). The tower property gives \(\mathbb E[R_ig]=\mathbb E[c^\star g]\). By Cauchy–Schwarz,</p>
+<div class="math-display">\[\big\lVert\mathbb E[c\,g]-\mathbb E[R_i\,g]\big\rVert\;\le\;\sqrt{\mathbb E\big[(c-c^\star)^2\big]}\;\sqrt{\mathbb E\lVert g\rVert^2}.\]</div>
+<p>The bias of the label-free gradient is thus bounded by the square root of the excess Brier score, the first term of Section 1's decomposition, evaluated for the per-sample correctness \(R_i\). An exactly calibrated-in-posterior confidence gives an unbiased gradient for the true correctness reward. Mere marginal calibration, \(\mathbb E[Y\mid c]=c\), is not enough. TTRL is the special case \(c(a)=\mathbf 1[a=a_{\mathrm{maj}}]\), a hard confidence whose excess Brier is large whenever majorities are often wrong.</p>
+<p><strong>D3, the Rao–Blackwellized verifier gradient</strong>, comes from the notes and was given in Section 6.</p>
+<p><strong>D4, route-reliability sandwich bounds</strong>, is new here and is stated in Section 8(a). It applies classical two-terminal network-reliability bounds to the cross-model step graph.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Result</th>
+<th>Assumption</th>
+<th>What it implies for trace-based group confidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>External Bayesianity (<a href="https://doi.org/10.1214/aos/1176346726" target="_blank" rel="noopener">Genest</a>)</td>
+<td>Shared likelihood</td>
+<td>Mean of log-odds is right only for fully shared evidence</td>
+</tr>
+<tr>
+<td>Independent pooling (<a href="https://doi.org/10.1007/s00355-010-0453-x" target="_blank" rel="noopener">Dietrich</a>)</td>
+<td>Private evidence independent given \(H\)</td>
+<td>Log-odds sum is right only with zero overlap</td>
+</tr>
+<tr>
+<td>Effective number (<a href="https://arxiv.org/abs/1406.2148" target="_blank" rel="noopener">Satopää et al.</a>)</td>
+<td>Gaussian partial information</td>
+<td>Deflate evidence by \(1+(N-1)\lambda\); overlap is the lever</td>
+</tr>
+<tr>
+<td>Robust impossibility (<a href="https://arxiv.org/abs/2111.03153" target="_blank" rel="noopener">Neyman–Roughgarden</a>; <a href="https://arxiv.org/abs/2604.24517" target="_blank" rel="noopener">Chen–Peng–Tang</a>)</td>
+<td>Unknown structure</td>
+<td>Without per-question structure, little is guaranteed</td>
+</tr>
+<tr>
+<td>Jury ceilings (<a href="https://doi.org/10.1017/s0266267113000096" target="_blank" rel="noopener">Dietrich–Spiekermann</a>; <a href="https://arxiv.org/abs/2607.23931" target="_blank" rel="noopener">Li–Hai</a>)</td>
+<td>Common causes</td>
+<td>Shared-error floor; agreement cannot certify</td>
+</tr>
+<tr>
+<td>Debate martingale vs amplification (<a href="https://arxiv.org/abs/2508.17536" target="_blank" rel="noopener">Choi et al.</a>; <a href="https://arxiv.org/abs/2510.12697" target="_blank" rel="noopener">Hu et al.</a>)</td>
+<td>Symmetric vs asymmetric updates</td>
+<td>Trajectories carry evidence only through asymmetry</td>
+</tr>
+<tr>
+<td>Dependence-robust merging (<a href="https://doi.org/10.1214/20-aos2020" target="_blank" rel="noopener">Vovk–Wang</a>; <a href="https://arxiv.org/abs/2401.09379" target="_blank" rel="noopener">Gasparin–Ramdas</a>)</td>
+<td>None within blocks</td>
+<td>Guarantees that survive correlated agents</td>
+</tr>
+<tr>
+<td>CORP / grouping loss (<a href="https://doi.org/10.1073/pnas.2016191118" target="_blank" rel="noopener">Dimitriadis et al.</a>; <a href="https://arxiv.org/abs/2210.16315" target="_blank" rel="noopener">Perez-Lebel et al.</a>)</td>
+<td>Proper scores</td>
+<td>Recalibration cannot add ranking; new information must</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="8-five-research-directions-compared-on-theory-cost-and-risk">8. Five research directions, compared on theory, cost and risk</h2>
+<p>All five directions share one evaluation protocol, so their results can be compared and defended against the matched-compute critique.</p>
+<p><strong>Compute is matched.</strong> Every method sees the same six paths per agent and the same groups. Any extra compute is counted and reported, as Singhi et al. insist for verifiers: NLI passes, re-prompts, PRM forward passes and verifier tokens.</p>
+<p><strong>Metrics.</strong> Each method reports AUROC, AUARC, Brier after Platt scaling (as in the ARR paper), smooth ECE, and within-question discrimination. Significance comes from paired bootstraps over questions, plus the ARR paper's count of groups improved (for example, 15 of 15).</p>
+<p><strong>Stratified analysis is mandatory.</strong> Results are split by agreement pattern. The <strong>unanimous stratum</strong> is the key one, because any exchangeable answer-level pool is constant there. Any AUROC above 0.5 inside it can therefore be attributed to the traces.</p>
+<p><strong>Common baselines.</strong> Every direction is compared against the following:</p>
+<ul>
+<li>majority-vote share and the ARR pools;</li>
+<li>cross-model answer agreement in the LLMs-as-a-Jury style;</li>
+<li>Reasoning Consensus/DDRG-style attestation counting, implemented with the reader's own step matcher so the comparison isolates the counting rule;</li>
+<li>Qwen2.5-Math-PRM-7B with per-agent Platt maps on GSM8K, and out of domain on GPQA (<a href="https://huggingface.co/Qwen/Qwen2.5-Math-PRM-7B" target="_blank" rel="noopener">model card</a>);</li>
+<li>semantic entropy and KLE over answers and over steps;</li>
+<li>DeepConf lowest-window and tail confidence, where token log-probabilities are cached;</li>
+<li>ensemble or collaborative entropy and Hamidieh et al.'s total uncertainty;</li>
+<li>latent-truth aggregators (Dawid–Skene, Optimal Weight, Inverse Surprising Popularity), as baselines only.</li>
+</ul>
+<h3 id="a-dependence-aware-cross-model-reasoning-graph-confidence">(a) Dependence-aware cross-model reasoning-graph confidence</h3>
+<p><strong>Idea.</strong> Count support for an answer by distinct, independent derivations rather than by agreeing samples. Two agents that reach the same answer through the same intermediate results should add roughly one unit of evidence. Two agents that reach it through disjoint routes should add two.</p>
+<p><strong>Graph construction.</strong> For each question, pool the steps of every path from every agent and map them to atoms. On GSM8K, an atom is a canonicalized intermediate value; these are already cached per path. On the other four tasks, an atom is a cluster of the cached step embeddings under a cosine threshold, with membership confirmed by bidirectional NLI (DeBERTa-MNLI or MiniCheck). Agent \(i\)'s support for answer \(a\) is \(S_i(a)=\bigcup_{j:\,a_{ij}=a}\mathrm{atoms}(\tau_{ij})\). Atoms that occur in paths ending in different answers get down-weighted, because under assumption (A1) of Candidate 1 their likelihood ratio is close to one. The overlap between two agents is \(\hat\rho_{ij}(a)=w(S_i\cap S_j)/\sqrt{w(S_i)\,w(S_j)}\), with atom weights \(w\).</p>
+<p>Three estimators follow, in increasing order of assumption strength.</p>
+<p><strong>Estimator (i): the overlap-deflated pool.</strong> This is a plug-in version of Satopää's revealed aggregator (Candidate 2). With per-agent recalibrated evidence \(x_i(a)=L(p_i(a))-L(p_0)\) and an overlap matrix \(\hat R(a)\) with unit diagonal, it is</p>
+<div class="math-display">\[L\big(\hat c(a)\big)=L(p_0)+\mathbf 1^\top\hat R(a)^{+}\,x(a).\]</div>
+<p>It interpolates exactly between the reader's two extreme pools:</p>
+<ul>
+<li>With \(\hat R=I\), it is the log-odds sum.</li>
+<li>Under compound symmetry, \(\hat R=(1-\hat\lambda)I+\hat\lambda\mathbf 1\mathbf 1^\top\). Then \(\hat R^{-1}\mathbf 1=\mathbf 1/(1+(m-1)\hat\lambda)\), and the pool deflates the evidence sum by the design effect.</li>
+<li>With complete overlap, \(\hat R=\mathbf 1\mathbf 1^\top\), the Moore–Penrose pseudo-inverse gives \(\mathbf 1^\top\hat R^{+}x=\tfrac1m\sum_ix_i\), the mean of log-odds.</li>
+</ul>
+<p>The overlap is estimated per question, which no forecast-only aggregator can do. In practice \(\hat R\) needs shrinkage toward the identity, and the weights \(\hat R^{-1}\mathbf 1\) can turn negative when overlaps are very uneven, so they should be clipped.</p>
+<p><strong>Estimator (ii): route counting and route reliability (derivation D4, new in this report).</strong> Let \(G_q(a)\) be the directed graph whose nodes are atoms and whose edges join consecutive atoms in any path that ends in \(a\). Add a source \(q\) and a sink \(a\). By Menger's theorem, the maximum number of vertex-disjoint \(q\to a\) routes equals the size of the minimum vertex cut. That cut size, \(\kappa(a)\), is a parameter-free "number of independent derivations".</p>
+<p>A probabilistic version follows. Give each atom an independent validity probability \(\theta_v\), and define the route reliability \(\mathcal R(a)\) as the probability that at least one route consists only of valid atoms. Then</p>
+<div class="math-display">\[1-\prod_{P\in\mathcal P}\Big(1-\prod_{v\in P}\theta_v\Big)\;\le\;\mathcal R(a)\;\le\;\min_{C}\Big[1-\prod_{v\in C}\big(1-\theta_v\big)\Big],\]</div>
+<p>where \(\mathcal P\) is any family of vertex-disjoint routes and \(C\) ranges over \(q\)–\(a\) vertex cuts. The lower bound holds because disjoint routes fail independently. The upper bound holds because every route crosses every cut. If a fully valid route can only end at the correct answer, then \(P(H)\ge\mathcal R(a)\).</p>
+<p>The bounds formalize the reader's intuition. If every agent's chain passes through one shared intermediate value \(v\), confidence cannot exceed \(\theta_v\), however many agents agree. The validities \(\theta_v\) can come without training from three places:</p>
+<ul>
+<li>arithmetic re-evaluation of explicit computations on GSM8K;</li>
+<li>NLI entailment from the question or from parent atoms;</li>
+<li>PRM step scores where a PRM applies.</li>
+</ul>
+<p><strong>Estimator (iii): exact inclusion–exclusion (Candidate 1).</strong> This uses \(m\) difference queries per candidate. A fixed reader model is re-prompted with only the new atoms \(D_i\) that each agent contributes. It is too costly for every question, but it can validate estimator (i) on GSM8K and GPQA subsets.</p>
+<p><strong>Nesting baseline.</strong> A step-level KLE builds a heat kernel over all steps and adds a between-model Jensen–Shannon term over per-model step-cluster distributions. This lifts ensemble and collaborative entropy from answers to steps. By KLE's Theorem 3.5, it reduces to answer-level SE when the step graph is block-diagonal by answer.</p>
+<p><strong>Why it should work.</strong> Candidate 4 shows that, once votes are exchangeable, only statistics outside the vote count can improve ranking. Overlap is such a statistic, and the correlated-error literature shows it varies across questions and model pairs. Three empirical results support the idea:</p>
+<ul>
+<li>the reader's step-matching gain;</li>
+<li>Hamidieh et al.'s epistemic term peaking on confident failures;</li>
+<li>Tan et al.'s finding that "self-consistent errors often differ across LLMs" (<a href="https://arxiv.org/abs/2505.17656" target="_blank" rel="noopener">Tan et al., 2025</a>).</li>
+</ul>
+<p><strong>Theorems.</strong> Candidate 1 gives the overcount identity, which predicts how miscalibrated the log-odds sum is on each question. Candidate 2 gives the \(O(\varepsilon/\kappa)\) excess-loss bound and the strict separation from constant extremizers. Candidate 4 gives saturation. D4 gives the route bounds, and Candidate 5 wraps any of these scores with a guarantee.</p>
+<p><strong>Experiments.</strong> Five experiments test the method:</p>
+<ol>
+<li><strong>Overcount test.</strong> Regress the log-odds-sum's per-question overconfidence on measured overlap. Candidate 1 predicts a monotone relation.</li>
+<li><strong>Main comparison.</strong> Compare all baselines on the five tasks and all groups.</li>
+<li><strong>Unanimous stratum.</strong> Measure AUROC inside the unanimous stratum, where answers carry no information.</li>
+<li><strong>Same-family groups.</strong> Compare heterogeneous groups with same-family groups such as Llama-3B with Llama-8B. The prediction is higher overlap and stronger deflation in the latter.</li>
+<li><strong>Controlled overlap.</strong> Inject a shared premise, for example the same misleading hint, into a chosen subset of agents. The test is whether the estimator's deflation tracks the injected overlap. This is a causal check that needs only cheap new generations.</li>
+</ol>
+<p><strong>Data and effort.</strong> The reader already has per-path answers, per-step embeddings, GSM8K intermediate numbers and per-agent confidences. Still needed: an NLI pass over step pairs (which needs the step text, if it is cached with the embeddings), a PRM pass on GSM8K, re-prompts for the inclusion–exclusion subset, and the controlled-overlap generations. The main risks are:</p>
+<ul>
+<li>On CommonsenseQA and BoolQ, traces are short and errors are knowledge errors that may not appear as distinct atoms.</li>
+<li>When wrong consensus is "mechanical" answer preference, agents can agree wrongly without sharing any visible step.</li>
+</ul>
+<p>Effort is four to six weeks for estimators (i), (ii) and the nesting baseline with proofs, plus one to two weeks for (iii).</p>
+<h3 id="b-argumentation-graph-confidence-with-a-calibration-evaluation">(b) Argumentation-graph confidence with a calibration evaluation</h3>
+<p><strong>Idea.</strong> Use the step graph from (a) as a QBAF:</p>
+<ul>
+<li>each candidate answer is a root claim;</li>
+<li>atoms are arguments;</li>
+<li>base scores \(\tau(v)\) come from calibrated per-agent confidences of the paths that contain \(v\), or from cross-family attestation;</li>
+<li>NLI entailment along chains gives supports, and NLI contradiction between atoms that support different answers gives attacks.</li>
+</ul>
+<p>The DF-QuAD strength of each root, normalized across candidates and Platt-scaled, is the confidence. Cross-model graphs contain cycles, so strengths need an iterative fixed point of the semantics.</p>
+<p><strong>Theory.</strong> DF-QuAD's base-score and relation contestability give monotonicity guarantees and per-node attributions. The noisy-OR observation in Section 4 gives a precise overcount: a restated supporter raises strength although it adds no new atoms. A provable contribution would be a dependence-aware aggregation that satisfies a no-double-counting axiom while staying monotone. Under that axiom, adding a supporter whose atoms are a subset of an existing supporter's leaves strength unchanged.</p>
+<p><strong>Experiment and risks.</strong> The decisive experiment is the first calibration evaluation of QBAF strengths. It reports Brier, ECE and AUROC against vote share, a MArgE-style union merge and (a). The risk is that ArgLLMs' accuracy was only "comparable" to chain-of-thought, so the strengths may simply track votes. Built on (a)'s graph, it costs two to three weeks. It belongs in the main paper as one variant row and one axiom, not as a standalone paper.</p>
+<h3 id="c-a-small-trained-group-verifier-with-an-rl-variant-and-content-ablations">(c) A small trained group verifier, with an RL variant and content ablations</h3>
+<p><strong>Architecture.</strong> Take a 1.5B–7B backbone with LoRA. Include at least one backbone from a family outside the agent pool, to limit self-preference. The input serializes:</p>
+<ul>
+<li>the question;</li>
+<li>the candidate answers, with per-agent counts;</li>
+<li>for each answer cluster, one representative path per agent, truncated.</li>
+</ul>
+<p>A "graph-as-text" variant replaces the paths with the atom list from (a), annotated with which agents and families attest each atom and which answers it leads to. The output is \(P(\text{Yes})\) to "Is \(\hat a\) correct?", or a confidence \(c(a)\) for every candidate, which direction (d) needs. Training minimizes BCE or Brier, optionally plus a logistic AUC surrogate. All of this is differentiable, with no RL.</p>
+<p><strong>RL variant.</strong> The verifier writes an analysis and then a confidence token. It is warm-started by rejection-sampled SFT in the ThinkPRM style and then optimized with the RLCR Brier reward on the fixed group answer, using the Rao–Blackwellized gradient from Section 6.</p>
+<p><strong>Data splits.</strong> Every (question, group) instance in the ARR grid is a training example. Splits are by question, so the same question never appears in training and test through different groups. Generalization is tested by leaving out one task and by leaving out one agent model.</p>
+<p><strong>Ablations that show the verifier reads content.</strong> Six ablations test this:</p>
+<ol>
+<li>an answers-only input of vote pattern and per-agent confidences;</li>
+<li>a logistic regression on vote share, per-agent confidences and trace lengths, which is the shortcut baseline;</li>
+<li>a counterfactual swap that replaces the traces with those of another question that has the identical vote pattern;</li>
+<li>targeted corruption of one supporting intermediate number on GSM8K, or deletion of the shared atom;</li>
+<li>AUROC inside the unanimous stratum;</li>
+<li>matched pairs with identical votes but different overlap, which test whether the verifier learned dependence.</li>
+</ol>
+<p><strong>Theory, cost and risk.</strong> The theory here is only proper scoring. The gap between the full-trace and answers-only verifiers is an empirical estimate, in Brier units, of how much information the traces add beyond the answers. That is the quantity Section 1 says matters. SFT runs take hours on an H200. The RL variant adds two to three weeks. The main risk is shortcut learning: the model may collapse to vote share plus length. The ablations above exist to detect that, and either result is reportable.</p>
+<h3 id="d-the-bridge-the-graph-confidence-as-a-label-free-reward">(d) The bridge: the graph confidence as a label-free reward</h3>
+<p><strong>Idea.</strong> In test-time RL, replace TTRL's majority-vote indicator with the confidence from (a). The fixed heterogeneous peers supply decorrelated evidence (the jury mechanism) while one policy model is updated. The reward is either hard, \(r_i=\mathbf 1[a_i=\arg\max_ac(a)]\), or soft, \(r_i=c(a_i)\), inside a GRPO or RLOO advantage. D1 shows that TTRL is the special case with a hard majority confidence. D2 shows that the gradient bias is bounded by the square root of the confidence's excess Brier score. This predicts that rewards with better Brier against gold produce less biased updates. It may also help explain why TTRL's gains shrink on harder problems and why it lost accuracy on GPQA, where majorities are often wrong.</p>
+<p><strong>Experiment.</strong> Start offline. On cached data, score each candidate reward against gold per-sample correctness: majority vote, self-certainty, cross-model entropy, the graph confidence and the trained verifier, each measured by reward accuracy and reward Brier. That needs no RL and fits in about a week. An online pilot would run TTRL on one 3B–8B model on GSM8K and GPQA with each reward, plus a gold-reward oracle, and track pass@1 and collapse over training.</p>
+<p><strong>Risks.</strong> The risks are the documented ones: hacking (INTUITOR), collapse (self-rewarding RL) and degradation below the starting model (intrinsic-feedback RL). There is also a new one. A dependence-aware reward pays for reaching the answer through routes peers did not use. That could encourage genuinely diverse correct reasoning, or cosmetic paraphrase that evades the matcher. Paraphrase-robust NLI matching is therefore required. The online part takes four to six weeks and is a follow-up paper. The offline reward analysis fits in the main paper.</p>
+<h3 id="e-debate-recovering-discrimination-from-switching-evidence">(e) Debate: recovering discrimination from switching evidence</h3>
+<p><strong>Estimator.</strong> Add the trajectory log-likelihood ratio of Candidate 3 to a round-0 confidence that was computed before contamination (the vote pool or the graph confidence from (a)):</p>
+<div class="math-display">\[L\big(c_{\mathrm{deb}}(a)\big)=L\big(c_0(a)\big)+\sum_{r&lt;R}\sum_i\lambda_i^r\big(k_i^r\big).\]</div>
+<p>The hazards \(\hat h_c(k)\) and \(\hat h_w(k)\) are counted on a calibration split with Laplace smoothing. This is lightly learned, with \(2\times|\text{exposure levels}|\) numbers.</p>
+<p><strong>Content-aware refinement.</strong> Classify each switch into one of three types and fit hazards per type:</p>
+<ul>
+<li>an adoption that brings an atom independently attested at round 0 by a model of a different family than the peer adopted;</li>
+<li>a bare adoption that reuses only the adopted peer's atoms;</li>
+<li>a spontaneous switch, with no peer holding the new answer.</li>
+</ul>
+<p>This answers "Not All Flips Are Conformity" with a content signal rather than an answer sequence.</p>
+<p><strong>Theory.</strong> Candidate 3 says the trajectory is uninformative if and only if \(h_c\equiv h_w\), which is the aggregator-level martingale. Otherwise the gain equals a conditional mutual information. A likelihood-ratio test of \(h_c=h_w\) on the cached logs tests the theorem directly.</p>
+<p><strong>Experiment.</strong> The experiment has three parts:</p>
+<ol>
+<li>Reproduce the drop in consistency-based AUROC and AUARC after debate, then test whether the trajectory ratio recovers it, in heterogeneous groups and in same-family groups.</li>
+<li>Compare against final-round consistency, round-0 consistency, Free-MAD scores, Value of Variance's system uncertainty, DiverseAgentEntropy's flip weights, ConfMAD's calibrated final confidence and the MAD-Conformist rule.</li>
+<li>Wrap the result in conformal selection, and test the protocol-shift failure reported by Hu and Su.</li>
+</ol>
+<p><strong>Data and effort.</strong> The answer-level version runs on the cached per-round answers. The content-aware version needs per-round trace text or embeddings. The main risk is assumption (C2), because agents read the same transcript, together with few switches per question. Effort is one to two weeks for the answer-level version and two more weeks for the content-aware one.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Direction</th>
+<th>Regime</th>
+<th>Core estimator</th>
+<th>Theorem</th>
+<th>Decisive experiment</th>
+<th>Data status</th>
+<th>Main risk</th>
+<th>Effort</th>
+<th>ICML potential</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(a) Dependence-aware graph confidence</td>
+<td>TF (+ Platt)</td>
+<td>Overlap-deflated pool; route count and reliability; inclusion–exclusion</td>
+<td>C1, C2, C4, D4, C5</td>
+<td>Overcount vs overlap; unanimous-stratum AUROC; injected-overlap test</td>
+<td>Mostly cached; NLI pass and re-prompts needed</td>
+<td>Small gains on short commonsense traces</td>
+<td>5–8 weeks</td>
+<td>High: new theory plus an open empirical gap</td>
+</tr>
+<tr>
+<td>(b) Argumentation confidence</td>
+<td>TF</td>
+<td>Dependence-aware DF-QuAD</td>
+<td>Contestability; no-double-counting axiom</td>
+<td>First Brier/AUROC of QBAF strengths</td>
+<td>Reuses (a)</td>
+<td>Tracks votes</td>
+<td>2–3 weeks</td>
+<td>Medium as a variant inside (a)</td>
+</tr>
+<tr>
+<td>(c) Trained group verifier</td>
+<td>TR (BCE); RL variant</td>
+<td>P(Yes) head; Rao–Blackwellized Brier RL</td>
+<td>Proper scoring; D3</td>
+<td>Content ablations; leave-one-model-out</td>
+<td>Cached traces; GPU hours</td>
+<td>Shortcut to vote share</td>
+<td>3–6 weeks</td>
+<td>Medium-high as the learned comparison</td>
+</tr>
+<tr>
+<td>(d) Graph confidence as reward</td>
+<td>TF reward, TR policy</td>
+<td>Soft or hard confidence reward in GRPO</td>
+<td>D1, D2</td>
+<td>Offline reward Brier; online TTRL pilot</td>
+<td>Offline cached; online new</td>
+<td>Hacking, collapse, compute</td>
+<td>1 week offline; 4–6 online</td>
+<td>High for a follow-up; a section now</td>
+</tr>
+<tr>
+<td>(e) Debate trajectory evidence</td>
+<td>LL (hazards)</td>
+<td>Round-0 confidence plus switch log-likelihood ratios</td>
+<td>C3</td>
+<td>Post-debate AUROC recovery; test of \(h_c=h_w\)</td>
+<td>Cached answers; content needs per-round text</td>
+<td>Within-round dependence</td>
+<td>2–4 weeks</td>
+<td>Medium-high as a second instantiation</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="9-recommendation-build-the-dependence-aware-graph-confidence-and-test-it-against-a-trained-reader">9. Recommendation: build the dependence-aware graph confidence and test it against a trained reader</h2>
+<p>Build the ICML paper around direction (a), with Candidates 1, 2 and 4 proved and Candidate 5 as the guarantee layer. Add direction (e) as a second instantiation of the same principle: evidence should be counted once, whether it is shared through reused steps or through copying during debate. Run direction (c) as the learned comparison, which also answers the reviewer question "why not just train a model?". Include the offline part of direction (d) as a section that connects the confidence to label-free RL through D1 and D2. Direction (b) fits as one variant row with its no-double-counting axiom.</p>
+<p>There are five reasons for this plan:</p>
+<ol>
+<li><strong>The theory is new and non-trivial.</strong> It identifies the information-overlap matrix per question from traces, which the forecasting literature calls unidentifiable from forecasts alone. It also gives an overcount identity and a saturation theorem that explain the reader's ARR findings rather than just reporting them.</li>
+<li><strong>The cached data allow fast go/no-go decisions</strong> before any expensive generation.</li>
+<li><strong>The closest competitors report accuracy only</strong>, so calibrated evaluation is itself a contribution.</li>
+<li><strong>The paper is interesting either way.</strong> If traces add nothing within the unanimous stratum, a formal and measured shared-error floor is still a finding.</li>
+<li><strong>The RL bridge broadens the audience</strong> beyond multi-agent debate, toward reasoning and label-free RL. That fits the reader's interest in the mathematics of dependent evidence.</li>
+</ol>
+<p>Effect sizes should be fixed in advance. The literature points to a few AUROC points at best, concentrated in high-overlap and unanimous strata.</p>
+<p>The ICML 2027 deadline is assumed to fall in late January 2027, but the exact dates are not in the notes. Check the official call and keep a buffer in case abstract registration comes first.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Week (2026–27)</th>
+<th>Work</th>
+<th>Checkpoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>W1, Oct 20–25</td>
+<td>Check ICLR 2027 OpenReview submissions for step-consensus confidence work. Load cached paths, step embeddings and GSM8K numbers into a per-question graph format. Implement answer-level baselines that need no new compute (vote share, ARR pools, ensemble/collaborative entropy and TU over answers, Optimal Weight/ISP and Dawid–Skene as baselines).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W2, Oct 26–Nov 1</td>
+<td>GSM8K atoms from intermediate values; overlap matrices; overlap-deflated pool and route count on GSM8K; CSQA/BoolQ atoms from embedding clusters; overcount test.</td>
+<td><strong>G1 (Nov 1).</strong> Go if measured overlap predicts the log-odds-sum overconfidence (bootstrap CI excludes zero) and either the deflated pool improves Brier in most groups or trace features give AUROC above 0.5 in the unanimous stratum. If only the overcount holds, refocus on calibration and theory and move effort to (e) and (c). If neither holds, revisit atom matching with NLI before pivoting.</td>
+</tr>
+<tr>
+<td>W3, Nov 2–8</td>
+<td>NLI pass over step pairs for CSQA, BoolQ, TruthfulQA and GPQA (GPU job); step-level KLE; route reliability with arithmetic re-evaluation on GSM8K; DF-QuAD variant.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W4, Nov 9–15</td>
+<td>Full five-task evaluation with paired bootstraps; Qwen2.5-Math-PRM-7B on GSM8K and GPQA with per-agent Platt; DeepConf-style windows from cached log-probs; compute accounting.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W5, Nov 16–22</td>
+<td>Proofs of Candidate 1 (with the DAG refinement) and Candidate 4; start Candidate 2(b); inclusion–exclusion re-prompts on a GSM8K/GPQA subset.</td>
+<td><strong>G2 (Nov 22).</strong> Significant AUROC/AUARC gain over jury agreement and attestation counting on at least three tasks, or a significant Brier gain on at least four, with gains concentrated where the theory predicts.</td>
+</tr>
+<tr>
+<td>W6, Nov 23–29</td>
+<td>Verifier data pipeline and serialization; BCE P(Yes) SFT at 1.5B and 3B; shortcut logistic baseline.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W7, Nov 30–Dec 6</td>
+<td>Verifier ablations: answers-only, counterfactual swap, number corruption, matched-overlap pairs; leave-one-model-out.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W8, Dec 7–13</td>
+<td>Debate trajectory likelihood ratio on cached logs; hazard estimates by exposure; test of \(h_c=h_w\).</td>
+<td><strong>G3 (Dec 13).</strong> The full-trace verifier beats answers-only and the shortcut baseline, overall and in the unanimous stratum, and the counterfactual swap hurts. If so, pilot the RL variant. If not, report collapse to agreement as support for the theory and skip RL.</td>
+</tr>
+<tr>
+<td>W9, Dec 14–20</td>
+<td>Content-aware switch types; offline reward analysis for (d) (reward accuracy and Brier of each label-free reward).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W10, Dec 21–27</td>
+<td>Holiday buffer; Candidates 3 and 5; e-value and conformal selective-answer experiments, including protocol shift.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W11, Dec 28–Jan 3</td>
+<td>Generalization: new traces from one or two long-CoT reasoning models, or a held-out task; controlled-overlap injection experiment.</td>
+<td><strong>G4 (Jan 3).</strong> Freeze methods and claims if the main effect keeps its sign out of sample.</td>
+</tr>
+<tr>
+<td>W12, Jan 4–10</td>
+<td>Optional RL verifier run if G3 passed; otherwise robustness checks on segmentation, NLI model, thresholds and shrinkage.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W13, Jan 11–17</td>
+<td>Full draft, figures, theory appendix.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W14, Jan 18–24</td>
+<td>Internal review, reproducibility package, polish.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>W15, Jan 25–31</td>
+<td>Submission buffer.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="conclusion">Conclusion</h2>
+<p>The question in this project has changed. In the ARR paper it was which pool to use. Here it is which information structure the agents share. Classical pooling theory already solves the aggregation problem once the overlap of evidence is known. The effective number of agents, the inclusion–exclusion correction, and the mean and the sum as its two endpoints all follow mechanically from it. What forecasting could never supply is a per-question measurement of that overlap. LLM agents write down their evidence, so for this system the overlap can be observed rather than assumed. That reframing is what turns a small, consistent empirical gain into a theory-backed method. It also predicts where the gain should appear: on questions where agents agree because they reproduce the same derivation. Every answer-level method is blind there by construction.</p>
+<p>The second finding links the two halves of the question. A group confidence is a label-free critic for the system's answer. Its excess Brier score bounds the bias of any policy gradient that uses it in place of gold rewards. Calibration research and label-free RL therefore share one figure of merit. A better-calibrated, dependence-aware confidence should make a better reward, a prediction that can be checked offline on data the reader already has before any RL is run. If it holds, the same object would explain the reader's saturation result, improve selective answering with distribution-free guarantees, and make label-free training more reliable.</p>
+<h2 id="references">References</h2>
+<p>Every source below was verified in the research notes against its arXiv record, a DOI or Crossref record, or an official proceedings page. Venues are listed only where the notes confirmed them. Where the notes did not record a paper's exact title, a bracketed description is given instead.</p>
+<h3 id="closest-competitors-and-multi-model-confidence">Closest competitors and multi-model confidence</h3>
+<ul>
+<li>Parulekar, Lee, Hakkani-Tür, Sundaram (2026). Reasoning Consensus: Structural Ensembling of LLM Reasoning via Weighted DAG Aggregation. <a href="https://arxiv.org/abs/2607.27783" target="_blank" rel="noopener">arXiv:2607.27783</a></li>
+<li>Liu et al. (2026). Beyond Answer Voting: Fine-Grained Correction of LLM Reasoning through Graph Alignment across Sampled Traces (DDRG). <a href="https://arxiv.org/abs/2610.18606" target="_blank" rel="noopener">arXiv:2610.18606</a></li>
+<li>Liu (2026). LLMs as a Jury: Cross-Model Consensus Can Outperform Process Reward Models for LLM Reasoning. <a href="https://arxiv.org/abs/2607.10139" target="_blank" rel="noopener">arXiv:2607.10139</a></li>
+<li>Cao (2023). [GraphReason: merging solutions into reasoning graphs with a graph verifier]. <a href="https://arxiv.org/abs/2308.09267" target="_blank" rel="noopener">arXiv:2308.09267</a></li>
+<li>Ng et al. (2025). MArgE: Meshing Argumentative Evidence from Multiple Large Language Models for Justifiable Claim Verification. <a href="https://arxiv.org/abs/2508.02584" target="_blank" rel="noopener">arXiv:2508.02584</a></li>
+<li>Liu et al. (2026). Diagnosing Multi-step Reasoning Failures in Black-box LLMs via Stepwise Confidence Attribution. ICML 2026. <a href="https://arxiv.org/abs/2605.19228" target="_blank" rel="noopener">arXiv:2605.19228</a></li>
+<li>Wei et al. (2026). [Ensemble Semantic Entropy]. <a href="https://arxiv.org/abs/2603.27098" target="_blank" rel="noopener">arXiv:2603.27098</a></li>
+<li>Sun et al. (2026). [Collaborative Entropy]. ICLR 2026 workshop. <a href="https://arxiv.org/abs/2603.28360" target="_blank" rel="noopener">arXiv:2603.28360</a></li>
+<li>Hamidieh, Thost, Gerych, Yurochkin, Ghassemi (2026). Complementing Self-Consistency with Cross-Model Disagreement for Uncertainty Quantification. <a href="https://arxiv.org/abs/2604.17112" target="_blank" rel="noopener">arXiv:2604.17112</a></li>
+<li>Xue, Greenewald, Mroueh, Mirzasoleiman (2025). Verify when Uncertain. <a href="https://arxiv.org/abs/2502.15845" target="_blank" rel="noopener">arXiv:2502.15845</a></li>
+<li>Kallem (2026). Learning to Trust the Crowd. <a href="https://arxiv.org/abs/2601.07245" target="_blank" rel="noopener">arXiv:2601.07245</a></li>
+<li>Tan et al. (2025). Too Consistent to Detect: A Study of Self-Consistent Errors in LLMs. EMNLP 2025. <a href="https://arxiv.org/abs/2505.17656" target="_blank" rel="noopener">arXiv:2505.17656</a></li>
+</ul>
+<h3 id="debate-conformity-and-correlated-errors">Debate, conformity and correlated errors</h3>
+<ul>
+<li>Chen, Saha, Bansal (2024). ReConcile. ACL 2024. <a href="https://arxiv.org/abs/2309.13007" target="_blank" rel="noopener">arXiv:2309.13007</a></li>
+<li>Lin, Hooi (2025). ConfMAD. EMNLP 2025 Findings. <a href="https://arxiv.org/abs/2509.14034" target="_blank" rel="noopener">arXiv:2509.14034</a></li>
+<li>Yoffe, Amayuelas, Wang (2024). DebUnc. <a href="https://arxiv.org/abs/2407.06426" target="_blank" rel="noopener">arXiv:2407.06426</a></li>
+<li>Zhu, Zhang, Chi, Stafford, Collier, Vlachos (2026). Demystifying Multi-Agent Debate: The Role of Confidence and Diversity. <a href="https://arxiv.org/abs/2601.19921" target="_blank" rel="noopener">arXiv:2601.19921</a></li>
+<li>Armstrong (2026). MARGIN. <a href="https://arxiv.org/abs/2605.22949" target="_blank" rel="noopener">arXiv:2605.22949</a></li>
+<li>Jiang, Zheng, Thakur, Yang (2026). What Confidence Routing Is Actually Doing. <a href="https://arxiv.org/abs/2609.27822" target="_blank" rel="noopener">arXiv:2609.27822</a></li>
+<li>Choi, Zhu, Li (2025). Debate or Vote: Which Yields Better Decisions in Multi-Agent Large Language Models? NeurIPS 2025. <a href="https://arxiv.org/abs/2508.17536" target="_blank" rel="noopener">arXiv:2508.17536</a></li>
+<li>Bertalanič, Fortuna (2026). The Cost of Consensus. ACM CAIS 2026. <a href="https://arxiv.org/abs/2605.00914" target="_blank" rel="noopener">arXiv:2605.00914</a></li>
+<li>Hao et al. (2026). Not All Flips Are Conformity. <a href="https://arxiv.org/abs/2606.00820" target="_blank" rel="noopener">arXiv:2606.00820</a></li>
+<li>Wynn, Satija, Hadfield (2025). Talk Isn't Always Cheap. ICML 2025 MAS Workshop. <a href="https://arxiv.org/abs/2509.05396" target="_blank" rel="noopener">arXiv:2509.05396</a></li>
+<li>Estornell, Liu (2024). Multi-LLM Debate: Framework, Principals, and Interventions. NeurIPS 2024. <a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/32e07a110c6c6acf1afbf2bf82b614ad-Paper-Conference.pdf" target="_blank" rel="noopener">Proceedings PDF</a></li>
+<li>Cui et al. (2025). Free-MAD. <a href="https://arxiv.org/abs/2509.11035" target="_blank" rel="noopener">arXiv:2509.11035</a></li>
+<li>Tang et al. (2026). The Value of Variance. <a href="https://arxiv.org/abs/2602.07186" target="_blank" rel="noopener">arXiv:2602.07186</a></li>
+<li>Hu, Tan, Wang, Qu, Chen (2025). Multi-Agent Debate for LLM Judges with Adaptive Stability Detection. NeurIPS 2025. <a href="https://arxiv.org/abs/2510.12697" target="_blank" rel="noopener">arXiv:2510.12697</a></li>
+<li>Okawa (2026). Emergence of Biased Consensus in Multi-Agent LLM Debates. ICML 2026. <a href="https://arxiv.org/abs/2608.02827" target="_blank" rel="noopener">arXiv:2608.02827</a></li>
+<li>Kim, Garg, Peng, Garg (2025). Correlated Errors in Large Language Models. ICML 2025. <a href="https://arxiv.org/abs/2506.07962" target="_blank" rel="noopener">arXiv:2506.07962</a></li>
+<li>Goel et al. (2025). Great Models Think Alike and this Undermines AI Oversight. <a href="https://arxiv.org/abs/2502.04313" target="_blank" rel="noopener">arXiv:2502.04313</a></li>
+<li>Kohli (2026). Nine Judges, Two Effective Votes: Correlated Errors Undermine LLM Evaluation Panels. <a href="https://arxiv.org/abs/2605.29800" target="_blank" rel="noopener">arXiv:2605.29800</a></li>
+<li>Denisov-Blanch et al. (2026). Consensus is Not Verification. <a href="https://arxiv.org/abs/2603.06612" target="_blank" rel="noopener">arXiv:2603.06612</a></li>
+<li>Zhang et al. (2026). Decomposing Wrong-Consensus Agreement in LLM Self-Consistency. <a href="https://arxiv.org/abs/2608.18795" target="_blank" rel="noopener">arXiv:2608.18795</a></li>
+<li>Li, Lin, Xia, Jin (2025). Rethinking Mixture-of-Agents (Self-MoA). <a href="https://arxiv.org/abs/2502.00674" target="_blank" rel="noopener">arXiv:2502.00674</a></li>
+<li>Li, Hai (2026). State-dependent error correlations shape voting thresholds in committees of AI agents. <a href="https://arxiv.org/abs/2607.23931" target="_blank" rel="noopener">arXiv:2607.23931</a></li>
+</ul>
+<h3 id="latent-truth-and-weak-supervision-aggregators-baselines-only">Latent-truth and weak-supervision aggregators (baselines only)</h3>
+<ul>
+<li>Saad-Falcon et al. (2025). Shrinking the Generation-Verification Gap with Weak Verifiers (Weaver). NeurIPS 2025. <a href="https://arxiv.org/abs/2506.18203" target="_blank" rel="noopener">arXiv:2506.18203</a></li>
+<li>Guha et al. (2024). Smoothie. NeurIPS 2024. <a href="https://arxiv.org/abs/2412.04692" target="_blank" rel="noopener">arXiv:2412.04692</a></li>
+<li>Ai, Pan, Simchi-Levi, Tambe, Xu (2026). Beyond Majority Voting: LLM Aggregation by Leveraging Higher-Order Information. ICML 2026. <a href="https://arxiv.org/abs/2510.01499" target="_blank" rel="noopener">arXiv:2510.01499</a></li>
+<li>Balasubramanian, Podkopaev, Kasiviswanathan (2026). Dependence-Aware Label Aggregation for LLM-as-a-Judge via Ising Models. ICML 2026. <a href="https://arxiv.org/abs/2601.22336" target="_blank" rel="noopener">arXiv:2601.22336</a></li>
+</ul>
+<h3 id="single-trace-and-sampling-based-confidence">Single-trace and sampling-based confidence</h3>
+<ul>
+<li>Kuhn, Gal, Farquhar (2023). Semantic Uncertainty. ICLR 2023. <a href="https://arxiv.org/abs/2302.09664" target="_blank" rel="noopener">arXiv:2302.09664</a></li>
+<li>Farquhar, Kossen, Kuhn, Gal (2024). Detecting hallucinations in large language models using semantic entropy. Nature 630. <a href="https://doi.org/10.1038/s41586-024-07421-0" target="_blank" rel="noopener">DOI:10.1038/s41586-024-07421-0</a></li>
+<li>Nikitin, Kossen, Gal, Marttinen (2024). Kernel Language Entropy. NeurIPS 2024. <a href="https://arxiv.org/abs/2405.20003" target="_blank" rel="noopener">arXiv:2405.20003</a></li>
+<li>Lin, Trivedi, Sun (2024). Generating with Confidence: Uncertainty Quantification for Black-box Large Language Models. TMLR. <a href="https://arxiv.org/abs/2305.19187" target="_blank" rel="noopener">arXiv:2305.19187</a></li>
+<li>Ou et al. (2026). The Origins of Stochasticity. <a href="https://arxiv.org/abs/2606.22792" target="_blank" rel="noopener">arXiv:2606.22792</a></li>
+<li>Lyu et al. (2024). Calibrating Large Language Models with Sample Consistency. <a href="https://arxiv.org/abs/2402.13904" target="_blank" rel="noopener">arXiv:2402.13904</a></li>
+<li>Taubenfeld et al. (2025). Confidence Improves Self-Consistency in LLMs. <a href="https://arxiv.org/abs/2502.06233" target="_blank" rel="noopener">arXiv:2502.06233</a></li>
+<li>Ding (2026). When LLMs Agree, Are They Right? <a href="https://arxiv.org/abs/2607.08065" target="_blank" rel="noopener">arXiv:2607.08065</a></li>
+<li>Pandey, Raghu, Pandey (2026). SelfDoubt. <a href="https://arxiv.org/abs/2604.06389" target="_blank" rel="noopener">arXiv:2604.06389</a></li>
+<li>Fu, Wang, Tian, Zhao (2025). Deep Think with Confidence. ICLR 2026. <a href="https://arxiv.org/abs/2508.15260" target="_blank" rel="noopener">arXiv:2508.15260</a></li>
+<li>Kang, Zhao, Song (2025). Scalable Best-of-N Selection for LLMs via Self-Certainty. NeurIPS 2025. <a href="https://arxiv.org/abs/2502.18581" target="_blank" rel="noopener">arXiv:2502.18581</a></li>
+<li>Wang, Zhou (2024). Chain-of-Thought Reasoning Without Prompting. <a href="https://arxiv.org/abs/2402.10200" target="_blank" rel="noopener">arXiv:2402.10200</a></li>
+<li>Razghandi et al. (2025). [CER: confidence of intermediate answers]. ACL 2025. <a href="https://arxiv.org/abs/2502.14634" target="_blank" rel="noopener">arXiv:2502.14634</a></li>
+<li>Iwase, Ichihara, Quamar, Komiyama (2026). [Prefix Consistency]. <a href="https://arxiv.org/abs/2605.07654" target="_blank" rel="noopener">arXiv:2605.07654</a></li>
+<li>Fu et al. (2024). [Certaindex / Dynasor]. <a href="https://arxiv.org/abs/2412.20993" target="_blank" rel="noopener">arXiv:2412.20993</a></li>
+<li>Liu, Wang (2025). [Answer Convergence]. <a href="https://arxiv.org/abs/2506.02536" target="_blank" rel="noopener">arXiv:2506.02536</a></li>
+<li>Zhao (2026). [Entropy trajectory shape as a correctness signal]. <a href="https://arxiv.org/abs/2603.18940" target="_blank" rel="noopener">arXiv:2603.18940</a></li>
+<li>Koh et al. (2026). [Spurious CoT termination]. EMNLP 2026. <a href="https://arxiv.org/abs/2609.03633" target="_blank" rel="noopener">arXiv:2609.03633</a></li>
+<li>Hassid, Synnaeve, Adi, Schwartz (2025). [Shorter reasoning chains and short-m@k selection]. <a href="https://arxiv.org/abs/2505.17813" target="_blank" rel="noopener">arXiv:2505.17813</a></li>
+<li>Devic et al. (2025). Trace Length is a Simple Uncertainty Signal in Reasoning Models. <a href="https://arxiv.org/abs/2510.10409" target="_blank" rel="noopener">arXiv:2510.10409</a></li>
+<li>Feng, Kempe, Zhang, Jain, Hartshorn (2025). [Review ratio and failed-step fraction in reasoning graphs]. <a href="https://arxiv.org/abs/2509.19284" target="_blank" rel="noopener">arXiv:2509.19284</a></li>
+<li>Rezazadeh, Davoodi (2026). The Shape of Overthinking: Backtracking Bursts. <a href="https://arxiv.org/abs/2605.27965" target="_blank" rel="noopener">arXiv:2605.27965</a></li>
+<li>Zulaika et al. (2026). Backtracking is Decorative: A Mechanistic Account. ICML 2026 Workshop on Mechanistic Interpretability. <a href="https://openreview.net/forum?id=IUX6hpNZBd" target="_blank" rel="noopener">OpenReview</a></li>
+<li>Nyandwi et al. (2026). Amplified Does Not Mean Predictive. COLM 2026. <a href="https://arxiv.org/abs/2608.13760" target="_blank" rel="noopener">arXiv:2608.13760</a></li>
+<li>David (2025). Temporal Predictors of Outcome in Reasoning LMs. <a href="https://arxiv.org/abs/2511.14773" target="_blank" rel="noopener">arXiv:2511.14773</a></li>
+<li>Zhang et al. (2025). Reasoning Models Know When They're Right: Probing Hidden States for Self-Verification. <a href="https://arxiv.org/abs/2504.05419" target="_blank" rel="noopener">arXiv:2504.05419</a></li>
+<li>Ni, Fadeeva et al. (2026). [ReProbe]. ACL 2026. <a href="https://arxiv.org/abs/2511.06209" target="_blank" rel="noopener">arXiv:2511.06209</a></li>
+<li>Yoon et al. (2025). Reasoning Models Better Express Their Confidence. NeurIPS 2025. <a href="https://arxiv.org/abs/2505.14489" target="_blank" rel="noopener">arXiv:2505.14489</a></li>
+<li>Mei et al. (2026). Reasoning about Uncertainty: Do Reasoning Models Know When They Don't Know? Findings of EACL 2026. <a href="https://arxiv.org/abs/2506.18183" target="_blank" rel="noopener">arXiv:2506.18183</a></li>
+<li>Gani, Meskin, Liu, Cohan (2026). Quantifying Faithful Confidence Expression in LRMs. <a href="https://arxiv.org/abs/2606.03969" target="_blank" rel="noopener">arXiv:2606.03969</a></li>
+<li>Kook et al. (2026). [Copy inflation of log-probabilities in multi-turn search agents]. EMNLP 2026 Findings. <a href="https://arxiv.org/abs/2608.24024" target="_blank" rel="noopener">arXiv:2608.24024</a></li>
+<li>Liu, Liu, Ran (2026). [Confidence Geometry / NeuralConf]. <a href="https://arxiv.org/abs/2605.16824" target="_blank" rel="noopener">arXiv:2605.16824</a></li>
+</ul>
+<h3 id="reasoning-graphs-topology-and-argumentation">Reasoning graphs, topology and argumentation</h3>
+<ul>
+<li>Jiang et al. (2025). What Makes a Good Reasoning Chain? Uncovering Structural Patterns in Long Chain-of-Thought Reasoning (LCoT2Tree). EMNLP 2025. <a href="https://arxiv.org/abs/2505.22148" target="_blank" rel="noopener">arXiv:2505.22148</a></li>
+<li>Xiong et al. (2025). Mapping the Minds of LLMs: A Graph-Based Analysis of Reasoning LLM. <a href="https://arxiv.org/abs/2505.13890" target="_blank" rel="noopener">arXiv:2505.13890</a></li>
+<li>Lee et al. (2026). ReasoningFlow: Discourse Structures for Understanding LLM Reasoning Traces. <a href="https://arxiv.org/abs/2606.05402" target="_blank" rel="noopener">arXiv:2606.05402</a></li>
+<li>Mukherjee et al. (2025). Premise-Augmented Reasoning Chains Improve Error Identification in Math reasoning with LLMs (PARC). ICML 2025. <a href="https://arxiv.org/abs/2502.02362" target="_blank" rel="noopener">arXiv:2502.02362</a></li>
+<li>Da et al. (2025). Understanding the Uncertainty of LLM Explanations: A Perspective Based on Reasoning Topology. COLM 2025. <a href="https://arxiv.org/abs/2502.17026" target="_blank" rel="noopener">arXiv:2502.17026</a></li>
+<li>Tang et al. (2024). MiniCheck. EMNLP 2024. <a href="https://arxiv.org/abs/2404.10774" target="_blank" rel="noopener">arXiv:2404.10774</a></li>
+<li>Minegishi et al. (2025). Topology of Reasoning: Understanding Large Reasoning Models through Reasoning Graph Properties. NeurIPS 2025. <a href="https://arxiv.org/abs/2506.05744" target="_blank" rel="noopener">arXiv:2506.05744</a></li>
+<li>Wanner et al. (2024). A Closer Look at Claim Decomposition. <a href="https://arxiv.org/abs/2403.11903" target="_blank" rel="noopener">arXiv:2403.11903</a></li>
+<li>Jiang et al. (2024). Graph-based Uncertainty Metrics for Long-form Language Model Outputs. NeurIPS 2024. <a href="https://arxiv.org/abs/2410.20783" target="_blank" rel="noopener">arXiv:2410.20783</a></li>
+<li>Bouchard et al. (2026). Fine-Grained Uncertainty Quantification for Long-Form Language Model Outputs: A Comparative Study. TMLR 2026. <a href="https://arxiv.org/abs/2602.17431" target="_blank" rel="noopener">arXiv:2602.17431</a></li>
+<li>Li et al. (2024). Graph-based Confidence Calibration for Large Language Models. <a href="https://arxiv.org/abs/2411.02454" target="_blank" rel="noopener">arXiv:2411.02454</a></li>
+<li>Khanmohammadi et al. (2026). How Reliable are Confidence Estimators for Large Reasoning Models? A Systematic Benchmark on High-Stakes Domains. EACL 2026. <a href="https://arxiv.org/abs/2601.08134" target="_blank" rel="noopener">arXiv:2601.08134</a></li>
+<li>Tan et al. (2025). The Shape of Reasoning: Topological Analysis of Reasoning Traces in Large Language Models. ICML 2026 workshop. <a href="https://arxiv.org/abs/2510.20665" target="_blank" rel="noopener">arXiv:2510.20665</a></li>
+<li>Bazarova et al. (2025). Hallucination Detection in LLMs with Topological Divergence on Attention Graphs (TOHA). ACL 2026. <a href="https://arxiv.org/abs/2504.10063" target="_blank" rel="noopener">arXiv:2504.10063</a></li>
+<li>Shen (2026). Evidence Graph Consistency in Retrieval-Augmented Generation: A Model-Dependent Analysis of Hallucination Detection. <a href="https://arxiv.org/abs/2606.06748" target="_blank" rel="noopener">arXiv:2606.06748</a></li>
+<li>Revalor, Rehman, Pal (2026). Can We Trust LLM's Logic? Quantifying Uncertainty, Coherence, and Robustness via a Graph-Based Framework (GRAPHEVAL). <a href="https://arxiv.org/abs/2607.08017" target="_blank" rel="noopener">arXiv:2607.08017</a></li>
+<li>Freedman et al. (2025). Argumentative Large Language Models for Explainable and Contestable Claim Verification. AAAI 2025. <a href="https://arxiv.org/abs/2405.02079" target="_blank" rel="noopener">arXiv:2405.02079</a></li>
+<li>Zhou et al. (2025). Evaluating Uncertainty Quantification Methods in Argumentative Large Language Models. Findings of EMNLP 2025. <a href="https://arxiv.org/abs/2510.02339" target="_blank" rel="noopener">arXiv:2510.02339</a></li>
+<li>Gorur, Rago, Toni (2026). Retrieval- and Argumentation-Enhanced Multi-Agent LLMs for Judgmental Forecasting. AAMAS 2026. <a href="https://arxiv.org/abs/2510.24303" target="_blank" rel="noopener">arXiv:2510.24303</a></li>
+<li>Mitchell et al. (2022). Enhancing Self-Consistency and Performance of Pre-Trained Language Models through Natural Language Inference (ConCoRD). EMNLP 2022. <a href="https://arxiv.org/abs/2211.11875" target="_blank" rel="noopener">arXiv:2211.11875</a></li>
+<li>Feng et al. (2025). A Trustworthy Bayesian Inference Framework for Large Language Models (BIRD). ICLR 2025. <a href="https://arxiv.org/abs/2404.12494" target="_blank" rel="noopener">arXiv:2404.12494</a></li>
+<li>Rubin-Toles et al. (2025). Conformal Language Model Reasoning with Coherent Factuality. ICLR 2025. <a href="https://arxiv.org/abs/2505.17126" target="_blank" rel="noopener">arXiv:2505.17126</a></li>
+</ul>
+<h3 id="reward-models-verifiers-value-estimation-and-label-free-rl">Reward models, verifiers, value estimation and label-free RL</h3>
+<ul>
+<li>Cobbe et al. (2021). Training Verifiers to Solve Math Word Problems. <a href="https://arxiv.org/abs/2110.14168" target="_blank" rel="noopener">arXiv:2110.14168</a></li>
+<li>Lightman et al. (2023). Let's Verify Step by Step. <a href="https://arxiv.org/abs/2305.20050" target="_blank" rel="noopener">arXiv:2305.20050</a></li>
+<li>Wang et al. (2023). Math-Shepherd: Verify and Reinforce LLMs Step-by-step without Human Annotations. <a href="https://arxiv.org/abs/2312.08935" target="_blank" rel="noopener">arXiv:2312.08935</a></li>
+<li>Luo et al. (2024). Improve Mathematical Reasoning in Language Models by Automated Process Supervision (OmegaPRM). <a href="https://arxiv.org/abs/2406.06592" target="_blank" rel="noopener">arXiv:2406.06592</a></li>
+<li>Snell et al. (2024). Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters. <a href="https://arxiv.org/abs/2408.03314" target="_blank" rel="noopener">arXiv:2408.03314</a></li>
+<li>Zhang et al. (2025). The Lessons of Developing Process Reward Models in Mathematical Reasoning. <a href="https://arxiv.org/abs/2501.07301" target="_blank" rel="noopener">arXiv:2501.07301</a></li>
+<li>Qwen (2025). Qwen2.5-Math-PRM-7B model card. <a href="https://huggingface.co/Qwen/Qwen2.5-Math-PRM-7B" target="_blank" rel="noopener">Hugging Face</a></li>
+<li>Khalifa et al. (2025). Process Reward Models That Think (ThinkPRM). <a href="https://arxiv.org/abs/2504.16828" target="_blank" rel="noopener">arXiv:2504.16828</a></li>
+<li>[VersaPRM] (2025). <a href="https://arxiv.org/abs/2502.06737" target="_blank" rel="noopener">arXiv:2502.06737</a></li>
+<li>Kamoi et al. (2026). [FoVer: PRMs from formal-verification step labels]. ACL 2026 Findings. <a href="https://arxiv.org/abs/2505.15960" target="_blank" rel="noopener">arXiv:2505.15960</a></li>
+<li>Park et al. (2025). Know What You Don't Know: Uncertainty Calibration of Process Reward Models. NeurIPS 2025. <a href="https://arxiv.org/abs/2506.09338" target="_blank" rel="noopener">arXiv:2506.09338</a></li>
+<li>Singhi et al. (2025). When To Solve, When To Verify. COLM 2025. <a href="https://arxiv.org/abs/2504.01005" target="_blank" rel="noopener">arXiv:2504.01005</a></li>
+<li>Feng et al. (2025). Is PRM Necessary? Problem-Solving RL Implicitly Induces PRM Capability in LLMs. NeurIPS 2025. <a href="https://arxiv.org/abs/2505.11227" target="_blank" rel="noopener">arXiv:2505.11227</a></li>
+<li>Zhou et al. (2026). Variation in Verification: Understanding Verification Dynamics in Large Language Models. ICLR 2026. <a href="https://arxiv.org/abs/2509.17995" target="_blank" rel="noopener">arXiv:2509.17995</a></li>
+<li>Panickssery et al. (2024). LLM Evaluators Recognize and Favor Their Own Generations. <a href="https://arxiv.org/abs/2404.13076" target="_blank" rel="noopener">arXiv:2404.13076</a></li>
+<li>Schulman et al. (2017). Proximal Policy Optimization Algorithms. <a href="https://arxiv.org/abs/1707.06347" target="_blank" rel="noopener">arXiv:1707.06347</a></li>
+<li>Schulman et al. (2015). High-Dimensional Continuous Control Using Generalized Advantage Estimation. <a href="https://arxiv.org/abs/1506.02438" target="_blank" rel="noopener">arXiv:1506.02438</a></li>
+<li>Kazemnejad et al. (2025). VinePPO. ICML 2025. <a href="https://arxiv.org/abs/2410.01679" target="_blank" rel="noopener">arXiv:2410.01679</a></li>
+<li>Setlur et al. (2024). Rewarding Progress: Scaling Automated Process Verifiers for LLM Reasoning. <a href="https://arxiv.org/abs/2410.08146" target="_blank" rel="noopener">arXiv:2410.08146</a></li>
+<li>Jia et al. (2025). Do We Need to Verify Step by Step? Rethinking Process Supervision from a Theoretical Perspective. <a href="https://arxiv.org/abs/2502.10581" target="_blank" rel="noopener">arXiv:2502.10581</a></li>
+<li>Wang et al. (2025). [Value-Guided Search]. NeurIPS 2025. <a href="https://arxiv.org/abs/2505.17373" target="_blank" rel="noopener">arXiv:2505.17373</a></li>
+<li>Wu et al. (2025). Mitigating LLM Hallucination via Behaviorally Calibrated RL. <a href="https://arxiv.org/abs/2512.19920" target="_blank" rel="noopener">arXiv:2512.19920</a></li>
+<li>Shao et al. (2024). [DeepSeekMath, introducing GRPO]. <a href="https://arxiv.org/abs/2402.03300" target="_blank" rel="noopener">arXiv:2402.03300</a></li>
+<li>Mroueh (2025). [Analysis of GRPO under verifiable binary rewards]. <a href="https://arxiv.org/abs/2503.06639" target="_blank" rel="noopener">arXiv:2503.06639</a></li>
+<li>Liu et al. (2025). [Dr. GRPO]. <a href="https://arxiv.org/abs/2503.20783" target="_blank" rel="noopener">arXiv:2503.20783</a></li>
+<li>Ahmadian et al. (2024). [Revisiting REINFORCE-style optimization for RLHF; RLOO]. <a href="https://arxiv.org/abs/2402.14740" target="_blank" rel="noopener">arXiv:2402.14740</a></li>
+<li>Yu et al. (2025). [DAPO]. <a href="https://arxiv.org/abs/2503.14476" target="_blank" rel="noopener">arXiv:2503.14476</a></li>
+<li>Zuo et al. (2025). [TTRL: test-time reinforcement learning]. <a href="https://arxiv.org/abs/2504.16084" target="_blank" rel="noopener">arXiv:2504.16084</a></li>
+<li>Zhao et al. (2025). [INTUITOR: self-certainty as reward]. ICLR 2026. <a href="https://arxiv.org/abs/2505.19590" target="_blank" rel="noopener">arXiv:2505.19590</a></li>
+<li>Zhang et al. (2025). [No Free Lunch: RL from internal feedback]. <a href="https://arxiv.org/abs/2506.17219" target="_blank" rel="noopener">arXiv:2506.17219</a></li>
+<li>Shafayat et al. (2025). [SRT: self-rewarding RL]. <a href="https://arxiv.org/abs/2505.21444" target="_blank" rel="noopener">arXiv:2505.21444</a></li>
+<li>Gorbett et al. (2026). Label-Free Reinforcement Learning via Cross-Model Entropy. <a href="https://arxiv.org/abs/2605.29009" target="_blank" rel="noopener">arXiv:2605.29009</a></li>
+</ul>
+<h3 id="training-calibrated-confidence-and-trained-aggregators">Training calibrated confidence and trained aggregators</h3>
+<ul>
+<li>Li et al. (2025). [ConfTuner: tokenized Brier score]. NeurIPS 2025. <a href="https://arxiv.org/abs/2508.18847" target="_blank" rel="noopener">arXiv:2508.18847</a></li>
+<li>Huang et al. (2025). [Self-Calibration]. <a href="https://arxiv.org/abs/2503.00031" target="_blank" rel="noopener">arXiv:2503.00031</a></li>
+<li>Kapoor et al. (2024). [Fine-tuned uncertainty estimation from graded examples]. NeurIPS 2024. <a href="https://arxiv.org/abs/2406.08391" target="_blank" rel="noopener">arXiv:2406.08391</a></li>
+<li>Ulmer et al. (2024). [APRICOT: auxiliary calibration model]. <a href="https://arxiv.org/abs/2403.05973" target="_blank" rel="noopener">arXiv:2403.05973</a></li>
+<li>Damani et al. (2025). Beyond Binary Rewards: Training LMs to Reason About Their Uncertainty (RLCR). <a href="https://arxiv.org/abs/2507.16806" target="_blank" rel="noopener">arXiv:2507.16806</a></li>
+<li>Bani-Harouni et al. (2025). [Rewarding Doubt]. <a href="https://arxiv.org/abs/2503.02623" target="_blank" rel="noopener">arXiv:2503.02623</a></li>
+<li>Wang et al. (2026). [CalibSFT]. <a href="https://arxiv.org/abs/2609.32470" target="_blank" rel="noopener">arXiv:2609.32470</a></li>
+<li>Wang et al. (2026). [CAPO: calibration-aware policy optimization]. ACL 2026. <a href="https://arxiv.org/abs/2604.12632" target="_blank" rel="noopener">arXiv:2604.12632</a></li>
+<li>Yaldiz et al. (2026). [Decision-token calibration-aware RL]. <a href="https://arxiv.org/abs/2601.13284" target="_blank" rel="noopener">arXiv:2601.13284</a></li>
+<li>Jang et al. (2025). [Confidence-only SFT elicits self-verification]. <a href="https://arxiv.org/abs/2506.03723" target="_blank" rel="noopener">arXiv:2506.03723</a></li>
+<li>Qi et al. (2025). [Sample Set Aggregator (SSA)]. <a href="https://arxiv.org/abs/2506.09014" target="_blank" rel="noopener">arXiv:2506.09014</a></li>
+<li>Zhao et al. (2025). [AggLM]. <a href="https://arxiv.org/abs/2509.06870" target="_blank" rel="noopener">arXiv:2509.06870</a></li>
+<li>Toshniwal et al. (2025). [GenSelect]. <a href="https://arxiv.org/abs/2507.17797" target="_blank" rel="noopener">arXiv:2507.17797</a></li>
+<li>Shi et al. (2025). Heimdall: test-time scaling on the generative verification. <a href="https://arxiv.org/abs/2504.10337" target="_blank" rel="noopener">arXiv:2504.10337</a></li>
+<li>Park et al. (2025). [MAPoRL]. <a href="https://arxiv.org/abs/2502.18439" target="_blank" rel="noopener">arXiv:2502.18439</a></li>
+</ul>
+<h3 id="pooling-aggregation-evaluation-and-guarantees">Pooling, aggregation, evaluation and guarantees</h3>
+<ul>
+<li>Genest (1984). A Characterization Theorem for Externally Bayesian Groups. Annals of Statistics 12(3). <a href="https://doi.org/10.1214/aos/1176346726" target="_blank" rel="noopener">DOI:10.1214/aos/1176346726</a></li>
+<li>Dietrich (2010). Bayesian group belief. Social Choice and Welfare 35(4). <a href="https://doi.org/10.1007/s00355-010-0453-x" target="_blank" rel="noopener">DOI:10.1007/s00355-010-0453-x</a></li>
+<li>Satopää, Pemantle, Ungar (2016). Modeling Probability Forecasts via Information Diversity. JASA 111(516). <a href="https://arxiv.org/abs/1406.2148" target="_blank" rel="noopener">arXiv:1406.2148</a></li>
+<li>Ranjan, Gneiting (2010). Combining Probability Forecasts. JRSS-B 72(1). <a href="https://doi.org/10.1111/j.1467-9868.2009.00726.x" target="_blank" rel="noopener">DOI:10.1111/j.1467-9868.2009.00726.x</a></li>
+<li>Lichtendahl, Grushka-Cockayne, Jose, Winkler (2022). Extremizing and Antiextremizing in Bayesian Ensembles of Binary-Event Forecasts. Operations Research 70(5). <a href="https://doi.org/10.1287/opre.2021.2176" target="_blank" rel="noopener">DOI:10.1287/opre.2021.2176</a></li>
+<li>Tammet, Järv, Draheim (2026). Every pooling rule has its world. <a href="https://arxiv.org/abs/2608.11275" target="_blank" rel="noopener">arXiv:2608.11275</a></li>
+<li>Arieli, Babichenko, Smorodinsky (2018). Robust forecast aggregation. PNAS 115(52). <a href="https://doi.org/10.1073/pnas.1813934115" target="_blank" rel="noopener">DOI:10.1073/pnas.1813934115</a></li>
+<li>Neyman, Roughgarden. Are You Smarter Than a Random Expert? The Robust Aggregation of Substitutable Signals. <a href="https://arxiv.org/abs/2111.03153" target="_blank" rel="noopener">arXiv:2111.03153</a></li>
+<li>Chen, Peng, Tang (2026). Prior-Agnostic Robust Forecast Aggregation. <a href="https://arxiv.org/abs/2604.24517" target="_blank" rel="noopener">arXiv:2604.24517</a></li>
+<li>Frongillo, Monroe, Neyman, Waggoner (2025). Robust forecast aggregation via additional queries. <a href="https://arxiv.org/abs/2512.05271" target="_blank" rel="noopener">arXiv:2512.05271</a></li>
+<li>Ladha (1993). Condorcet's jury theorem in light of de Finetti's theorem. Social Choice and Welfare 10(1). <a href="https://doi.org/10.1007/bf00187434" target="_blank" rel="noopener">DOI:10.1007/bf00187434</a></li>
+<li>Dietrich, Spiekermann (2013). Epistemic Democracy with Defensible Premises. Economics &amp; Philosophy 29(1). <a href="https://doi.org/10.1017/s0266267113000096" target="_blank" rel="noopener">DOI:10.1017/s0266267113000096</a></li>
+<li>Dietrich, Spiekermann (2013). Independent Opinions? On the Causal Foundations of Belief Formation and Jury Theorems. Mind 122(487). <a href="https://doi.org/10.1093/mind/fzt074" target="_blank" rel="noopener">DOI:10.1093/mind/fzt074</a></li>
+<li>Prelec, Seung, McCoy (2017). A solution to the single-question crowd wisdom problem. Nature 541. <a href="https://doi.org/10.1038/nature21054" target="_blank" rel="noopener">DOI:10.1038/nature21054</a></li>
+<li>Palley, Soll (2019). Extracting the Wisdom of Crowds When Information Is Shared. Management Science 65(5). <a href="https://doi.org/10.1287/mnsc.2018.3047" target="_blank" rel="noopener">DOI:10.1287/mnsc.2018.3047</a></li>
+<li>Vovk, Wang (2021). E-values: Calibration, combination and applications. Annals of Statistics 49(3). <a href="https://doi.org/10.1214/20-aos2020" target="_blank" rel="noopener">DOI:10.1214/20-aos2020</a></li>
+<li>Vovk, Wang (2020). Combining p-values via averaging. Biometrika 107(4). <a href="https://doi.org/10.1093/biomet/asaa027" target="_blank" rel="noopener">DOI:10.1093/biomet/asaa027</a></li>
+<li>Gasparin, Ramdas (2024). Merging uncertainty sets via majority vote. <a href="https://arxiv.org/abs/2401.09379" target="_blank" rel="noopener">arXiv:2401.09379</a></li>
+<li>Angelopoulos, Bates, Candès, Jordan, Lei (2021). Learn then Test: Calibrating Predictive Algorithms to Achieve Risk Control. <a href="https://arxiv.org/abs/2110.01052" target="_blank" rel="noopener">arXiv:2110.01052</a></li>
+<li>Angelopoulos, Bates, Fisch, Lei, Schuster (2022). Conformal Risk Control. <a href="https://arxiv.org/abs/2208.02814" target="_blank" rel="noopener">arXiv:2208.02814</a></li>
+<li>Hu, Su (2026). Conformity Breaks Conformal Prediction. <a href="https://arxiv.org/abs/2609.04445" target="_blank" rel="noopener">arXiv:2609.04445</a></li>
+<li>Li (2026). Calibrate, Don't Curate: Label-Efficient Estimation from Noisy LLM Judges. <a href="https://arxiv.org/abs/2605.09702" target="_blank" rel="noopener">arXiv:2605.09702</a></li>
+<li>Traub et al. (2024). Overcoming Common Flaws in the Evaluation of Selective Classification Systems. <a href="https://arxiv.org/abs/2407.01032" target="_blank" rel="noopener">arXiv:2407.01032</a></li>
+<li>Błasiok, Gopalan, Hu, Nakkiran (2023). A Unifying Theory of Distance from Calibration. STOC 2023. <a href="https://arxiv.org/abs/2211.16886" target="_blank" rel="noopener">arXiv:2211.16886</a></li>
+<li>Dimitriadis, Gneiting, Jordan (2021). Stable reliability diagrams for probabilistic classifiers. PNAS 118(8). <a href="https://doi.org/10.1073/pnas.2016191118" target="_blank" rel="noopener">DOI:10.1073/pnas.2016191118</a></li>
+<li>Perez-Lebel, Le Morvan, Varoquaux (2023). Beyond calibration: estimating the grouping loss of modern neural networks. ICLR 2023. <a href="https://arxiv.org/abs/2210.16315" target="_blank" rel="noopener">arXiv:2210.16315</a></li>
+</ul>
+</main>
+<footer><a href="#top">Back to top</a></footer>
+</div>
+</div>
+</body>
+</html>
