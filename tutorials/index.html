@@ -1,3 +1,5 @@
+---
+---
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,36 +24,15 @@
 </head>
 <body>
 
-<div id="topics"></div>
-
-<div class="topic">Other</div>
-<div class="item">– <a href="/reasoning_alts">Reasoning Directions Atlas</a></div>
-
-<script>
-async function loadTutorials() {
-  const api = "https://api.github.com/repos/aliielahi/aliielahi.github.io/contents/tutorials";
-  const container = document.getElementById("topics");
-  const prettyName = name => name.replace(/\.html$/, "").replace(/[-_]/g, " ");
-  try {
-    const folders = (await (await fetch(api)).json()).filter(item => item.type === "dir");
-    folders.sort((a, b) => a.name.localeCompare(b.name));
-    let html = "";
-    for (const folder of folders) {
-      const files = (await (await fetch(api + "/" + encodeURIComponent(folder.name))).json())
-        .filter(item => item.name.endsWith(".html"))
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-      html += '<div class="topic">' + prettyName(folder.name) + "</div>";
-      for (const file of files) {
-        html += '<div class="item">– <a href="/' + file.path.split("/").map(encodeURIComponent).join("/") + '">' + prettyName(file.name) + "</a></div>";
-      }
-    }
-    container.innerHTML = html;
-  } catch (error) {
-    container.innerHTML = "<div>Couldn't load the list right now. Try refreshing.</div>";
-  }
-}
-loadTutorials();
-</script>
+{% assign files = site.static_files | where: "extname", ".html" | where_exp: "f", "f.path contains '/tutorials/'" %}
+{% assign groups = files | group_by_exp: "f", "f.path | remove_first: '/tutorials/' | split: '/' | first" | sort: "name" %}
+{% for group in groups %}
+<div class="topic">{{ group.name | replace: "-", " " }}</div>
+{% assign items = group.items | sort: "name" %}
+{% for item in items %}
+<div class="item">– <a href="{{ item.path }}">{{ item.basename | replace: "_", " " | replace: "-", " " }}</a></div>
+{% endfor %}
+{% endfor %}
 
 </body>
 </html>
