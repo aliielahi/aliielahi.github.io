@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 2: Mechanism design basics</title>
+<script>
+  window.MathJax = { tex: { tags: 'ams' }, svg: { fontCache: 'global' } };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+  :root { --ink: #0b0b0b; --ink2: #52514e; --surface: #fcfcfb; --rule: #e4e3df;
+          --blue: #2a78d6; --orange: #eb6834; --box: #f3f2ee; }
+  body { font: 17px/1.6 Georgia, "Times New Roman", serif; color: var(--ink); background: var(--surface);
+         max-width: 820px; margin: 2rem auto; padding: 0 1.2rem; }
+  h1 { font-size: 1.9rem; margin-bottom: .2rem; }
+  h2 { margin-top: 2.6rem; border-bottom: 1px solid var(--rule); padding-bottom: .2rem; }
+  h3 { margin-top: 1.8rem; }
+  .meta { color: var(--ink2); }
+  .box { background: var(--box); border-left: 4px solid var(--ink2); padding: .6rem 1rem; margin: 1rem 0; }
+  .def { border-left-color: var(--blue); }
+  .intuition { border-left-color: var(--orange); }
+  .box > b:first-child { display: block; margin-bottom: .2rem; }
+  table { border-collapse: collapse; margin: 1rem auto; }
+  td, th { border: 1px solid var(--rule); padding: .35rem .8rem; text-align: center; }
+  th { background: var(--box); }
+  details { background: var(--box); padding: .5rem 1rem; margin: .6rem 0; }
+  summary { cursor: pointer; font-weight: bold; }
+  .toc a { text-decoration: none; }
+  figure { margin: 1.5rem 0; text-align: center; }
+  figcaption { color: var(--ink2); font-size: .92rem; }
+  svg text { font: 13px Georgia, serif; fill: var(--ink); }
+  code { font-size: .9em; }
+</style>
+</head>
+<body>
+
+<h1>Lesson 2: Mechanism design basics</h1>
+<p class="meta">About 60 minutes. Everything is built from zero; formulas come after the examples. A quiz at the end checks the whole lesson.</p>
+
+<div class="box">
+<b>Goal of this lesson</b>
+<p>In Lesson 1 the rules of the game were given and we asked how players behave. <b>Mechanism design</b> turns this around: you <em>design the rules</em> so that, when everyone plays in their own interest, the outcome is good for you. An auction is a mechanism; MIRT is a mechanism.</p>
+<p>By the end you should be able to answer five questions in plain words:</p>
+<ol>
+<li>What is a bidder's "value", and how do we measure how happy a bidder is? (2.1, 2.2)</li>
+<li>What exactly is a mechanism? (2.3)</li>
+<li>What does it mean for an auction to be "truthful" (DSIC), and why do we care? (2.4, 2.5)</li>
+<li>Why is it enough for a designer to look only at truthful mechanisms? (the revelation principle, 2.6)</li>
+<li>How is all of this a Stackelberg game with the seller as leader, and where does that view stop working? (2.7, 2.8)</li>
+</ol>
+</div>
+
+<p class="toc"><b>Contents.</b>
+<a href="#m1">2.1 Private values</a> · <a href="#m2">2.2 Measuring happiness: quasi-linear utility</a> · <a href="#m3">2.3 What a mechanism is</a> · <a href="#m4">2.4 Truthfulness (DSIC)</a> · <a href="#m5">2.5 Voluntary participation (IR)</a> · <a href="#m6">2.6 The revelation principle</a> · <a href="#m7">2.7 Mechanism design as a Stackelberg game</a> · <a href="#m8">2.8 Ad auctions: VCG vs GSP, and MIRT</a> · <a href="#sum">Summary</a> · <a href="#quiz">Quiz</a>.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="m1">2.1 The problem: selling to people whose values you don't know (5 min)</h2>
+<p><b>Story.</b> You want to sell one painting. Two people are interested: Alice and Bob. Alice would happily pay up to \$70 for it, Bob up to \$40. Those numbers are their <b>values</b>.</p>
+<div class="box def">
+<b>Value, in plain words.</b>
+A bidder's value \(v_i\) is the most they would pay. Paying exactly \(v_i\) leaves them as happy as not buying at all. It is <b>private</b>: only the bidder knows it.
+</div>
+<p>If you knew the values, selling would be easy: offer the painting to Alice for \$70 (or \$69.99). The whole difficulty is that <b>you don't know them</b>, and if you ask, Alice has every reason to say "oh, maybe \$20".</p>
+<p>What you usually do know is a rough picture of how values are spread: "a typical buyer values this between \$0 and \$100, every amount about equally likely". That picture is a probability distribution \(F\) (here uniform on \([0,100]\)), and we write \(v_i\sim F\). We assume each bidder's value is drawn separately (independently) from the others. This setting is called <b>independent private values</b>.</p>
+<p><b>In ads:</b> the bidders are advertisers, the item is an ad slot, and \(v_i\) is how much a click is worth to advertiser \(i\). The platform does not know \(v_i\); it only sees bids.</p>
+
+<!-- ============================================================ -->
+<h2 id="m2">2.2 Measuring happiness: quasi-linear utility (5 min)</h2>
+<p>A bidder's <b>utility</b> is a single number for "how good was this outcome for me". The standard choice is</p>
+<div class="box def">
+<b>Quasi-linear utility.</b>
+\[
+u_i \;=\; \underbrace{v_i\,x_i}_{\text{value of what you got}} \;-\; \underbrace{P_i}_{\text{what you paid}} .
+\]
+Here \(x_i\) is the amount of the item you get (or the probability you get it), between 0 and 1, and \(P_i\) is your payment.
+</div>
+<p><b>Examples.</b></p>
+<ul>
+<li>Alice (value 70) wins the painting and pays 40: \(u=70\cdot 1-40=30\).</li>
+<li>Alice loses and pays nothing: \(u=0\).</li>
+<li>Alice gets the painting with probability \(\tfrac12\) (a lottery) and pays 20: \(u=70\cdot\tfrac12-20=15\).</li>
+<li><b>An ad:</b> a click is worth 5 to the advertiser, the ad gets clicked with probability 0.1, and the price per click is 3. Then \(x_i=0.1\) (expected clicks), \(P_i=3\times 0.1\) (pay only when clicked), and \(u=(5-3)\times 0.1=0.2\). In the ad notation of these lessons, \(u_i=(v_i-p_i)\,x_i\) with \(p_i\) the price per click.</li>
+</ul>
+<p>"Quasi-linear" just means money enters as a plain subtraction: one more dollar paid is one less unit of happiness, no matter how rich you are. It ignores risk-aversion. It is the standard assumption in auction theory and in all the papers we read.</p>
+
+<!-- ============================================================ -->
+<h2 id="m3">2.3 What a mechanism is (8 min)</h2>
+<div class="box def">
+<b>Mechanism, in plain words.</b>
+A mechanism is a rule that takes everyone's <b>bids</b> \(b=(b_1,\dots,b_n)\) and announces two things:
+<ul>
+<li>the <b>allocation</b> \(x(b)\): who gets what (for ads: which ad goes in which slot, hence expected clicks), and</li>
+<li>the <b>payments</b> \(P(b)\): how much each bidder pays.</li>
+</ul>
+The bids are whatever the bidders choose to report. They do not have to equal the values.
+</div>
+<p>Four mechanisms for the painting, assuming for now that Alice bids 70 and Bob bids 40:</p>
+<table>
+<tr><th>mechanism</th><th>rule</th><th>outcome</th><th>Alice's utility</th></tr>
+<tr><td>First price</td><td>highest bid wins, pays its own bid</td><td>Alice wins, pays 70</td><td>0</td></tr>
+<tr><td>Second price</td><td>highest bid wins, pays the second-highest bid</td><td>Alice wins, pays 40</td><td>30</td></tr>
+<tr><td>Posted price \$50</td><td>anyone who bids at least 50 can buy at 50</td><td>Alice buys at 50</td><td>20</td></tr>
+<tr><td>Posted price \$80</td><td>same with 80</td><td>no sale</td><td>0</td></tr>
+</table>
+<p><b>But bidders choose their bids.</b> In first price, bidding 70 gives Alice nothing even when she wins. If she bids 45 and still wins, she gets \(70-45=25\). So she will <em>shade</em> (bid below her value). How much? It depends on what she thinks Bob will bid, which she doesn't know. That makes first price hard for bidders (they must guess) and hard for the designer (it must predict the guessing).</p>
+<p>This is the basic tension: <b>the designer controls the rules, but the bidders control the bids</b>. A good mechanism makes the bids it receives easy to predict, ideally equal to the values.</p>
+
+<!-- ============================================================ -->
+<h2 id="m4">2.4 Truthfulness: DSIC (12 min)</h2>
+<div class="box def">
+<b>DSIC, in plain words.</b>
+A mechanism is <b>dominant-strategy incentive compatible (DSIC)</b>, or "truthful", if for every bidder, <b>bidding your true value is best no matter what the others bid</b>.
+</div>
+<p>In symbols: for every bidder \(i\), every true value \(v_i\), every other bid \(b_i'\), and every bids of the others \(b_{-i}\),</p>
+\[
+\underbrace{v_i\,x_i(v_i,b_{-i}) - P_i(v_i,b_{-i})}_{\text{utility from bidding the truth}} \;\ge\; \underbrace{v_i\,x_i(b_i',b_{-i}) - P_i(b_i',b_{-i})}_{\text{utility from bidding } b_i'} .
+\]
+<p>"No matter what the others bid" (the "for every \(b_{-i}\)") is what makes it <em>dominant</em>: the bidder does not need to guess anything about the others.</p>
+
+<h4>Second price is DSIC: the picture in words</h4>
+<p>(The proof is in Lesson 1, section 1.2. Here is the intuition again.) Let \(t\) be the highest of the other bids. In second price, if you win, you pay \(t\), whatever you bid. Your bid only decides <em>whether</em> you win, not <em>what you pay</em>.</p>
+<ul>
+<li>If \(v_i>t\), you want to win (you gain \(v_i-t>0\)). Bidding \(v_i\) wins.</li>
+<li>If \(v_i &lt; t\), you want to lose (winning would cost more than it is worth). Bidding \(v_i\) loses.</li>
+</ul>
+<p>Bidding your value always makes the right call, so no other bid can do better. Notice the key idea: <b>your payment is the lowest bid that would still have won</b> (the threshold \(t\)). That idea generalizes; Lesson 4 (Myerson) shows it is essentially the only way to be DSIC.</p>
+
+<h4>First price is not DSIC</h4>
+<p>Alice has value 70 and Bob bids 40. Bidding 70 gives Alice \(0\). Bidding 41 gives her \(29\). One case where lying helps is enough to break DSIC.</p>
+
+<h4>Measuring how far from truthful: regret</h4>
+<div class="box def">
+<b>Ex-post regret, in plain words.</b>
+For one bidder, given everyone's bids: (the best utility it could get by bidding something else) minus (its utility from bidding the truth). It is never negative. A mechanism is DSIC exactly when this regret is 0 for every bidder in every situation.
+</div>
+\[
+\mathrm{regret}_i(v_i,b_{-i}) \;=\; \max_{b_i'} u_i(v_i;\,b_i',b_{-i}) \;-\; u_i(v_i;\,v_i,b_{-i}) \;\ge 0 .
+\]
+<p>This is the quantity RegretNet pushes to zero during training, and the quantity <code>gsp_regret</code> computes in NEK_GSP (exactly, over all ads and all possible reports). In first price with Alice at 70 and Bob at 40, Alice's regret is about 30 (she could bid just over 40).</p>
+
+<div class="box intuition">
+<b>Why designers love DSIC</b>
+<ul>
+<li><b>Bidders:</b> no guessing, no strategy, no spying on others. Just bid your value.</li>
+<li><b>Designer:</b> it can predict the bids (they equal the values), so it can predict revenue and welfare from the value distribution alone.</li>
+<li><b>Robustness:</b> it works whatever the bidders believe about each other.</li>
+</ul>
+A weaker notion, <b>BIC</b> (Bayesian incentive compatible), only asks that truth be best <em>on average</em>, assuming the others also bid truthfully and you know the value distribution. Every DSIC mechanism is BIC, but not the other way around.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="m5">2.5 Voluntary participation: IR (3 min)</h2>
+<div class="box def">
+<b>IR, in plain words.</b>
+A mechanism is <b>individually rational (IR)</b> if a truthful bidder never ends up worse off than if it had stayed home: \(u_i\ge 0\).
+</div>
+<p><b>Example that fails IR.</b> Second price, but every participant pays a \$10 entry fee. Bob, with value 5, bids 5, loses, and pays 10: \(u=-10\). Low-value bidders would simply stop coming. Second price without a fee is IR: the loser pays 0, and the winner pays \(t\le v_i\).</p>
+<p>Together, DSIC and IR say: "come, tell the truth, and you will never regret either decision."</p>
+
+<!-- ============================================================ -->
+<h2 id="m6">2.6 The revelation principle (12 min)</h2>
+<p>There are endless possible mechanisms: first price, second price, ascending auctions, auctions with entry fees, lotteries, complicated multi-round procedures... Searching over all of them looks hopeless. The revelation principle says you can restrict the search to truthful ones without losing anything.</p>
+
+<h4>The idea: a robot that bids for you</h4>
+<p>Take any mechanism \(M\), and suppose bidders play some equilibrium in it: a bidder with value \(v_i\) bids \(s_i(v_i)\). (For example, in first price with two bidders whose values are uniform on \([0,1]\), the equilibrium is to bid half your value, \(s_i(v)=v/2\).)</p>
+<p>Now the seller builds a new mechanism \(M'\):</p>
+<ol>
+<li>Each bidder tells a <b>robot</b> a value \(r_i\).</li>
+<li>The robot computes the bid \(s_i(r_i)\) that the bidder <em>would have</em> chosen in \(M\) with that value.</li>
+<li>The robot submits those bids to \(M\), and \(M\) decides as usual.</li>
+</ol>
+<p><b>Is telling the robot the truth best?</b> Suppose Alice tells the robot \(r_i\neq v_i\). That is the same as bidding \(s_i(r_i)\) in \(M\). But in \(M\), the bid \(s_i(v_i)\) was already her best choice. So the truth \(r_i=v_i\), which makes the robot bid \(s_i(v_i)\), is at least as good. Telling the truth is optimal in \(M'\), and \(M'\) produces exactly the same winners and payments as \(M\).</p>
+<div class="box def">
+<b>Revelation principle.</b>
+Any outcome that some mechanism reaches in equilibrium can also be reached by a <b>direct</b> mechanism (bidders just report values) in which <b>truth-telling</b> is an equilibrium. If the original strategies were dominant, the new mechanism is DSIC; if they were a Bayes–Nash equilibrium, it is BIC.
+</div>
+<p><b>Example.</b> First price with values uniform on \([0,1]\), equilibrium bid \(v/2\). The direct version: "the highest <em>reported value</em> wins and pays <em>half</em> of its report." Same outcomes, and truth-telling is an equilibrium of it.</p>
+<p>(It is BIC but not DSIC: if Alice somehow knew Bob reported 0.2 while her value is 0.9, she would report 0.41 and pay 0.205 instead of 0.45. The original first-price equilibrium was not dominant either, so the robot can't make it dominant.)</p>
+
+<div class="box intuition">
+<b>Why this matters</b>
+The designer can now describe any mechanism by just two functions of the reported values, \(x(v)\) and \(P(v)\), and add "truth-telling is optimal" as a <em>constraint</em>. Designing an auction becomes an ordinary optimization problem. This is exactly what Myerson solves on paper (Lesson 4) and what RegretNet solves with a neural network (regret = 0 as the constraint).
+</div>
+
+<!-- ============================================================ -->
+<h2 id="m7">2.7 Mechanism design as a Stackelberg game (8 min)</h2>
+<p>Now connect to Lesson 1. The seller <b>moves first and commits</b> to the rules. The bidders <b>see the rules and respond</b> with bids. So:</p>
+<ul>
+<li><b>Leader</b> = seller; what it commits to (\(x\) in Lesson 1's notation) = the mechanism \((x(\cdot),P(\cdot))\).</li>
+<li><b>Followers</b> = bidders; their response (\(y\)) = the bids, an equilibrium of the game the rules create.</li>
+</ul>
+<p>The seller's problem is <b>bilevel</b>: "choose rules to maximize expected revenue, where revenue is computed at the bids the bidders will choose under those rules." The inner level (predicting bids) is hard for a mechanism like first price.</p>
+<p><b>The revelation principle removes the inner level.</b> If the seller only considers truthful mechanisms, it already knows the bidders' answer: bid = value. The bilevel problem becomes a single-level problem with constraints:</p>
+\[
+\begin{aligned}
+\max_{x(\cdot),\,P(\cdot)}\ \ & \mathbb{E}_{v\sim F}\Big[\textstyle\sum_i P_i(v)\Big] &&\text{(expected revenue)}\\
+\text{s.t.}\ \ & v_i x_i(v) - P_i(v) \ge v_i x_i(b_i',v_{-i}) - P_i(b_i',v_{-i})\ \ \text{for all } i, v, b_i' &&\text{(DSIC)}\\
+& v_i x_i(v) - P_i(v) \ge 0 &&\text{(IR)}\\
+& \textstyle\sum_i x_i(v)\le 1,\ \ x_i(v)\ge 0 &&\text{(one item)}.
+\end{aligned}
+\]
+
+<h4>Commitment matters here too</h4>
+<p>Suppose the rule says "minimum price \$50; below that, no sale". The highest bid comes in at \$45. Right now, selling at \$45 looks better than not selling. But if bidders knew the seller would give in, the \$50 rule would mean nothing and they would bid lower. The rule only works if the seller truly sticks to it, exactly like the leader's commitment in Lesson 1.</p>
+
+<h4>Where this view stops working</h4>
+<p>The whole construction assumes the seller <b>knows \(F\)</b>, the value distribution. Real platforms don't; they <b>estimate it from past bids</b>. Then a bidder's bids today change the mechanism the seller uses tomorrow. Being truthful in each single auction (DSIC) no longer guarantees that truth is best over time, because lying can shift the seller's estimate in your favor. That is the flip to "game B" from Lesson 1 (section 2.8), where a bidder leads. The revelation principle says nothing about that game.</p>
+
+<!-- ============================================================ -->
+<h2 id="m8">2.8 Ad auctions: VCG vs GSP, and MIRT (7 min)</h2>
+<p>Two ad slots. The top slot gets clicked with probability 0.2, the second with 0.1. Three advertisers value a click at 10, 8 and 5, and (for now) bid truthfully. Both mechanisms below put advertiser 1 on top and advertiser 2 second.</p>
+
+<p><b>GSP (generalized second price):</b> each winner pays, per click, the next bid below it.</p>
+<ul><li>Advertiser 1 pays 8 per click (total \(8\times0.2=1.6\)); advertiser 2 pays 5 per click (total 0.5).</li></ul>
+
+<p><b>VCG:</b> each winner pays the harm it does to everyone else.</p>
+<ul>
+<li>Advertiser 1. Without it, the others would get \(8\times0.2+5\times0.1=2.1\) in value. With it, they get \(8\times0.1=0.8\). Harm \(=2.1-0.8=1.3\) in total, which is 6.5 per click.</li>
+<li>Advertiser 2. Without it, advertiser 3 would get \(5\times0.1=0.5\). With it, advertiser 3 gets 0. Harm \(=0.5\), which is 5 per click.</li>
+</ul>
+<p>At truthful bids GSP charges more (1.6 vs 1.3 for the top slot). But <b>GSP is not DSIC</b>:</p>
+<ul>
+<li>Advertiser 1, truthful: top slot, pays 8: \(u=(10-8)\times0.2=0.4\).</li>
+<li>Advertiser 1 bids 6 instead: second slot, pays 5: \(u=(10-5)\times0.1=0.5\). Lying pays, so its regret is 0.1.</li>
+</ul>
+<p>VCG is DSIC: you always pay the harm you cause, whatever you bid, so as in second price your bid only decides <em>which</em> outcome you get, and bidding your value picks the best one for you.</p>
+
+<div class="box intuition">
+<b>Link to your work</b>
+<ul>
+<li><b>MIRT</b> is DSIC for the same reason: the range of candidate slates is chosen without looking at bids, and then MIR picks the best slate from that range with VCG-style payments (equivalently, Myerson threshold payments).</li>
+<li><b>NEK_GSP</b> lives in the gap shown above: GSP prices are higher than VCG at truthful bids, but GSP is not truthful, so bidders shade. Your regret numbers and "GSP after response" columns measure how much of that extra revenue survives once bidders respond.</li>
+<li><b>The caveat from Lesson 1:</b> DSIC is a statement about a <em>fixed</em> mechanism. If MIRT's range generator were retrained on observed bids, a bidder could still try to lead (game B).</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="sum">Summary</h2>
+<ul>
+<li>A bidder's <b>value</b> is private; the seller knows only a distribution \(F\). Utility is <b>quasi-linear</b>: \(u_i=v_i x_i-P_i\) (ads: \((v_i-p_i)x_i\)).</li>
+<li>A <b>mechanism</b> maps bids to an allocation \(x(b)\) and payments \(P(b)\). Bidders choose bids, not values.</li>
+<li><b>DSIC</b>: truth is best whatever others do. Equivalent: ex-post <b>regret</b> is 0 everywhere. Second price and VCG are DSIC; first price and GSP are not.</li>
+<li><b>IR</b>: truthful bidders never lose by participating.</li>
+<li><b>Revelation principle</b>: anything achievable is achievable truthfully, so designers optimize over \(x(v),P(v)\) with DSIC/IR constraints.</li>
+<li>Mechanism design is a <b>Stackelberg game with the seller as leader</b>; the revelation principle turns its bilevel problem into a single-level one. This needs the seller to know \(F\) and commit. When the seller learns \(F\) from bids, bidders can lead instead.</li>
+</ul>
+
+<p><b>Next.</b> GSP and first price are not DSIC, so "bid = value" no longer predicts behavior. Lesson 3 asks what bidders <em>do</em> then (Bayes–Nash equilibrium of bidding functions) and how a seller who leads should evaluate its design at that equilibrium.</p>
+
+<!-- ============================================================ -->
+<h2 id="quiz">Quiz</h2>
+
+<details><summary>Q1. Alice values the painting at 70 and Bob at 40. They bid truthfully in a second-price auction with a reserve (minimum) price of 50. Who wins and what do they pay? What if the reserve is 80?</summary>
+<p>With reserve 50, Alice wins and pays \(\max(40,50)=50\): the lowest bid that would still have won. With reserve 80, nobody reaches the reserve, so there is no sale.</p>
+</details>
+
+<details><summary>Q2. A bidder with value 30 gets the item with probability 0.4 and pays 10. What is its utility? Is the outcome consistent with IR?</summary>
+<p>\(u=30\times0.4-10=2\ge 0\), so yes.</p>
+</details>
+
+<details><summary>Q3. In one sentence: why is first price not DSIC?</summary>
+<p>A truthful winner gets utility 0, while a slightly lower bid that still wins gives positive utility, so lying can pay.</p>
+</details>
+
+<details><summary>Q4. In the GSP example of 2.8, can advertiser 2 (value 8) gain by bidding something other than 8, given the others bid 10 and 5?</summary>
+<p>No. Truthful: second slot at 5, \(u=(8-5)\times0.1=0.3\). Bidding above 10: top slot at 10, \(u=(8-10)\times0.2=-0.4\). Bidding below 5: no slot, \(u=0\). Its regret is 0 here. DSIC fails because <em>some</em> bidder (advertiser 1) gains in <em>some</em> situation.</p>
+</details>
+
+<details><summary>Q5. Why is the direct version of first price ("highest report wins, pays half its report") BIC but not DSIC?</summary>
+<p>Truth is best on average when the others report truthfully and values are uniform. But for specific reports of the others it is not: with value 0.9 against a report of 0.2, reporting 0.41 still wins and pays 0.205 instead of 0.45.</p>
+</details>
+
+<details><summary>Q6. Second price with a \$10 entry fee for everyone: which property fails, and for whom?</summary>
+<p>IR fails for every bidder who loses (and for winners whose gain \(v_i-t\) is below 10): they end up with negative utility.</p>
+</details>
+
+<details><summary>Q7. Explain in your own words how the revelation principle turns the seller's bilevel problem into a single-level problem.</summary>
+<p>The inner level is "predict how bidders will bid under these rules". If the seller only considers truthful mechanisms, the answer is known in advance (bid = value), so the inner problem disappears and is replaced by the DSIC constraints on \(x(v)\) and \(P(v)\).</p>
+</details>
+
+<details><summary>Q8. A platform runs a DSIC auction but re-estimates the value distribution from last week's bids every Monday. Why can a bidder still gain by shading?</summary>
+<p>DSIC only says truth is best for this week's fixed rules. Shading also changes the data used to set next week's rules (for example, it lowers the estimated reserve price for this bidder). Over time the bidder can gain, so the seller is no longer the only leader. This is game B, which the Stackelberg Regret paper measures.</p>
+</details>
+
+</body>
+</html>

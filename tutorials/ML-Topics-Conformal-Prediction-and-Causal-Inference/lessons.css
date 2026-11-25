@@ -1,0 +1,29 @@
+:root { --ink: #0b0b0b; --ink2: #52514e; --surface: #fcfcfb; --rule: #e4e3df;
+        --blue: #2a78d6; --orange: #eb6834; --box: #f3f2ee; }
+body { font: 17px/1.6 Georgia, "Times New Roman", serif; color: var(--ink); background: var(--surface);
+       max-width: 860px; margin: 2rem auto; padding: 0 1.2rem; }
+h1 { font-size: 1.9rem; margin-bottom: .2rem; }
+h2 { margin-top: 2.6rem; border-bottom: 1px solid var(--rule); padding-bottom: .2rem; }
+h3 { margin-top: 1.8rem; }
+.meta { color: var(--ink2); }
+.box { background: var(--box); border-left: 4px solid var(--ink2); padding: .6rem 1rem; margin: 1rem 0; }
+.def { border-left-color: var(--blue); }
+.intuition { border-left-color: var(--orange); }
+.box > b:first-child { display: block; margin-bottom: .2rem; }
+table { border-collapse: collapse; margin: 1rem auto; }
+td, th { border: 1px solid var(--rule); padding: .35rem .8rem; text-align: center; }
+th { background: var(--box); }
+details { background: var(--box); padding: .5rem 1rem; margin: .6rem 0; }
+summary { cursor: pointer; font-weight: bold; }
+figure { margin: 1.5rem 0; text-align: center; }
+figcaption { color: var(--ink2); font-size: .92rem; margin-top: .3rem; }
+svg { max-width: 100%; height: auto; }
+svg text { font: 13px Georgia, serif; fill: var(--ink); }
+.controls { font-size: .95rem; margin: .4rem 0; }
+.controls label { margin: 0 .6rem; }
+.controls button { font: inherit; padding: .1rem .7rem; cursor: pointer; }
+.readout { font-size: .95rem; color: var(--ink2); }
+.flow { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; align-items: center; font-size: .92rem; }
+.flow div { border: 1px solid var(--ink2); border-radius: 4px; padding: .35rem .6rem; background: #fff; }
+.flow span { color: var(--ink2); }
+code { font-size: .9em; }

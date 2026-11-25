@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 1: The probability toolkit behind conformal prediction</title>
+<script>window.MathJax = { tex: { tags: 'ams' }, svg: { fontCache: 'global' } };</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<link rel="stylesheet" href="lessons.css">
+<script src="plot.js"></script>
+</head>
+<body>
+
+<h1>Lesson 1: The probability toolkit behind conformal prediction</h1>
+<p class="meta">About 55 minutes. Conformal prediction and causal inference series, lesson 1 of 16. No background needed beyond "probability = fraction of the time something happens".</p>
+
+<div class="box">
+<b>Why this lesson</b>
+Conformal prediction lets you say things like "the true answer is inside this set 90% of the time" about <em>any</em> model, including a black-box LLM, without assuming anything about the model or the data distribution. The whole guarantee rests on one simple fact:
+<em>if you drop a new point into a pile of similar points, it is equally likely to land anywhere in the sorted order.</em>
+This lesson builds the five tools you need to state and prove that fact: the CDF, quantiles, order statistics, exchangeability and the rank lemma. Lesson 2 turns them into conformal prediction.
+</div>
+
+<p><b>Contents.</b>
+<a href="#s1">1.1 Random variables and the CDF</a> ·
+<a href="#s2">1.2 Quantiles</a> ·
+<a href="#s3">1.3 Order statistics</a> ·
+<a href="#s4">1.4 Two counting facts</a> ·
+<a href="#s5">1.5 i.i.d. and exchangeability</a> ·
+<a href="#s6">1.6 The rank lemma</a> ·
+<a href="#sum">Summary</a> · <a href="#quiz">Quiz</a></p>
+
+<div class="box intuition">
+<b>Running example (used in lessons 1 and 2)</b>
+A risk-extraction model reads a patient note and predicts a severity score from 0 to 10. A doctor also rated each note. On 10 notes the model's <b>error</b> (|model score − doctor score|) was:
+\[
+0.3,\ 1.2,\ 0.7,\ 2.5,\ 0.1,\ 0.9,\ 1.8,\ 0.4,\ 3.1,\ 1.0 .
+\]
+A new note arrives. How large could the model's error on it be? Keep this question in mind; we answer it exactly at the end of the lesson.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s1">1.1 Random variables and the CDF</h2>
+<p>A <b>random variable</b> is a number whose value is decided by chance. Example: "the model's error on the next patient note". Before the note arrives we don't know the number, but we can say how likely different values are.</p>
+
+<div class="box def">
+<b>Cumulative distribution function (CDF).</b>
+For a random variable \(X\), the CDF is
+\[
+F(t) \;=\; P(X \le t).
+\]
+In words: "what fraction of the time is \(X\) at most \(t\)?"
+</div>
+<p>Three properties follow directly from the words:</p>
+<ul>
+<li>\(F\) never goes down: if \(s\le t\), then "\(X\le s\)" is a special case of "\(X\le t\)", so \(F(s)\le F(t)\).</li>
+<li>\(F\) goes from 0 (far left) to 1 (far right).</li>
+<li>If \(X\) can take a particular value with positive probability, \(F\) <em>jumps</em> there, and the jump includes that value (because of the "\(\le\)").</li>
+</ul>
+<p><b>Example.</b> Suppose errors follow the exponential distribution with rate 1 (written Exp(1)). Then \(F(t)=1-e^{-t}\) for \(t\ge 0\). So \(P(\text{error}\le 1)=1-e^{-1}\approx 0.632\): about 63% of notes have error at most 1.</p>
+
+<p>In practice we never know \(F\). We only have data. The data version is:</p>
+<div class="box def">
+<b>Empirical CDF.</b>
+Given observations \(X_1,\dots,X_n\),
+\[
+\hat F_n(t) \;=\; \frac{1}{n}\,\#\{i : X_i \le t\},
+\]
+the fraction of observations at most \(t\). (\(\#\) means "how many".)
+</div>
+<p><b>Example with our 10 errors.</b> Which are \(\le 1.0\)? 0.1, 0.3, 0.4, 0.7, 0.9, 1.0. That is 6 of 10, so \(\hat F_{10}(1.0)=0.6\). Which are \(\le 2\)? Eight of them, so \(\hat F_{10}(2)=0.8\). The empirical CDF is a staircase that climbs \(1/n\) at each data point.</p>
+
+<!-- ============================================================ -->
+<h2 id="s2">1.2 Quantiles</h2>
+<p>The CDF answers "given a threshold \(t\), what fraction is below it?" A quantile answers the reverse question: "given a fraction \(\tau\), what threshold has that fraction below it?"</p>
+
+<div class="box def">
+<b>Quantile.</b>
+The \(\tau\)-quantile (for \(0&lt;\tau\le 1\)) is the smallest threshold that has at least a fraction \(\tau\) at or below it:
+\[
+q_\tau \;=\; \inf\{\,t : F(t) \ge \tau\,\}.
+\]
+("\(\inf\)" means "the smallest value of", allowing for the boundary.)
+</div>
+<p><b>Example.</b> For Exp(1): solve \(1-e^{-t}=\tau\), giving \(q_\tau=-\ln(1-\tau)\). So \(q_{0.9}=\ln 10\approx 2.30\): 90% of errors are at most 2.30.</p>
+
+<p><b>Empirical quantile.</b> Use \(\hat F_n\) instead of \(F\). Sort the data. The staircase \(\hat F_n\) reaches height \(k/n\) exactly at the \(k\)-th smallest value. We need \(k/n\ge\tau\), i.e. \(k\ge n\tau\). The smallest such whole number is \(\lceil n\tau\rceil\), where \(\lceil a\rceil\) ("ceiling of \(a\)") is the smallest whole number \(\ge a\). So</p>
+\[
+\hat q_\tau \;=\; \text{the } \lceil n\tau\rceil\text{-th smallest observation}.
+\]
+<p><b>Examples</b> (sorted errors: 0.1, 0.3, 0.4, 0.7, 0.9, 1.0, 1.2, 1.8, 2.5, 3.1):</p>
+<ul>
+<li>\(\tau=0.5\): \(\lceil 5\rceil=5\), the 5th smallest is <b>0.9</b>.</li>
+<li>\(\tau=0.75\): \(\lceil 7.5\rceil=8\), the 8th smallest is <b>1.8</b>.</li>
+<li>\(\tau=0.9\): \(\lceil 9\rceil=9\), the 9th smallest is <b>2.5</b>.</li>
+</ul>
+
+<figure>
+<div class="controls">
+  <label>data: <select id="f1data"><option value="ours">our 10 errors</option><option value="exp">100 random draws from Exp(1)</option></select></label>
+  <label>\(\tau\) = <input id="f1tau" type="range" min="0.05" max="1" step="0.05" value="0.75"> <span id="f1tauv"></span></label>
+  <button id="f1new">new draws</button>
+</div>
+<svg id="f1" width="640" height="320"></svg>
+<div class="readout" id="f1read"></div>
+<figcaption>Figure 1. The empirical CDF (blue staircase). Filled dots mark where each step lands; the step includes its left end. The orange line goes across at height \(\tau\) until it first hits the staircase, then down to the quantile. With 100 draws, the dashed curve is the true CDF \(1-e^{-t}\); the staircase hugs it.</figcaption>
+</figure>
+
+<!-- ============================================================ -->
+<h2 id="s3">1.3 Order statistics</h2>
+<div class="box def">
+<b>Order statistics.</b>
+Sort the observations from smallest to largest and write them as
+\[
+X_{(1)} \le X_{(2)} \le \cdots \le X_{(n)} .
+\]
+\(X_{(k)}\) (with brackets around \(k\)) is the \(k\)-th smallest. \(X_{(1)}\) is the minimum and \(X_{(n)}\) the maximum.
+</div>
+<p>Brackets matter: \(X_3\) is the third observation <em>in the order it arrived</em> (here 0.7), while \(X_{(3)}\) is the third <em>smallest</em> (here 0.4). With this notation, the empirical quantile is just \(\hat q_\tau = X_{(\lceil n\tau\rceil)}\).</p>
+<p><b>Ties.</b> If two observations are equal, the sorting is still fine but "the rank" of a value becomes ambiguous. For continuous quantities (like a real-valued error) ties have probability zero. For rounded scores (for example an LLM that outputs one of five confidence levels) ties happen; we will see that they only make our guarantees <em>safer</em>.</p>
+
+<!-- ============================================================ -->
+<h2 id="s4">1.4 Two counting facts</h2>
+
+<h3>Fact A: the empirical CDF is a binomial count</h3>
+<p>Fix a threshold \(t\). If the \(X_i\) are independent draws from \(F\), each one is \(\le t\) with probability \(F(t)\), like a coin that lands heads with probability \(F(t)\). The number of heads in \(n\) tosses is binomial:</p>
+\[
+n\hat F_n(t)\;=\;\#\{i:X_i\le t\}\ \sim\ \mathrm{Binomial}\big(n,\,F(t)\big).
+\]
+<p>So \(\mathbb E[\hat F_n(t)]=F(t)\) (on average the staircase is right) and \(\mathrm{Var}[\hat F_n(t)]=F(t)(1-F(t))/n\) (its error shrinks like \(1/\sqrt n\)).</p>
+<p><b>Example.</b> If \(F(t)=0.9\) and \(n=100\), the count is Binomial(100, 0.9): mean 90, standard deviation \(\sqrt{100\cdot 0.9\cdot 0.1}=3\). So with 100 notes, the observed fraction below \(t\) is typically within about ±3 percentage points of the truth. With 10,000 notes it is within ±0.3.</p>
+
+<h3>Fact B: the probability integral transform</h3>
+<div class="box def">
+<b>Probability integral transform (PIT).</b>
+If \(X\) has a continuous CDF \(F\), then \(U=F(X)\) is uniformly distributed on \([0,1]\).
+</div>
+<p><b>In words.</b> \(F(X)\) is "the percentile of \(X\)". A random draw is equally likely to fall in any percentile band: 10% of draws are in the bottom 10%, 10% in the next 10%, and so on. That is exactly what "uniform" means.</p>
+<p><b>Proof.</b> For \(u\in(0,1)\), let \(q_u\) be the \(u\)-quantile, so \(F(q_u)=u\) (continuity). Then \(F(X)\le u\) happens exactly when \(X\le q_u\), so
+\(P(F(X)\le u)=P(X\le q_u)=F(q_u)=u\). That is the CDF of the uniform distribution. \(\square\)</p>
+<p><b>Why we care.</b> Anything that depends only on the <em>order</em> of the data (ranks, "which one is the 9th smallest") is unchanged if we replace each \(X_i\) by \(F(X_i)\), because \(F\) never goes down. After that replacement the data are uniform, <em>whatever \(F\) was</em>. So statements about ranks have the same probabilities for every distribution. This is the root of the word <b>distribution-free</b>.</p>
+
+<figure>
+<div class="controls"><button id="f2new">new draws</button></div>
+<svg id="f2a" width="320" height="230"></svg><svg id="f2b" width="320" height="230"></svg>
+<figcaption>Figure 2. Left: 2000 draws of \(X\sim\)Exp(1), very skewed. Right: the same draws after the transform \(U=F(X)=1-e^{-X}\). The bars are flat: \(U\) is uniform.</figcaption>
+</figure>
+
+<!-- ============================================================ -->
+<h2 id="s5">1.5 i.i.d. and exchangeability</h2>
+<p>Most statistics assumes data are <b>i.i.d.</b>: <em>independent</em> (one draw tells you nothing about another) and <em>identically distributed</em> (all come from the same \(F\)). Conformal prediction needs something weaker.</p>
+
+<div class="box def">
+<b>Exchangeability.</b>
+Random variables \(Z_1,\dots,Z_m\) are exchangeable if shuffling them does not change their joint distribution: for every reordering \(\sigma\) of \(\{1,\dots,m\}\),
+\[
+(Z_1,\dots,Z_m)\ \overset{d}{=}\ (Z_{\sigma(1)},\dots,Z_{\sigma(m)}) .
+\]
+(\(\overset{d}{=}\) means "has the same distribution as".) In words: if someone secretly shuffled the list, you could not tell.
+</div>
+
+<p><b>Example 1: i.i.d. is exchangeable.</b> For independent draws with density \(f\), the joint density is \(f(z_1)f(z_2)\cdots f(z_m)\). Multiplication doesn't care about order, so shuffling changes nothing.</p>
+
+<p><b>Example 2: exchangeable but not independent (drawing without replacement).</b> An urn has 3 red and 2 blue balls. Draw two without putting them back.</p>
+<table>
+<tr><th>first, second</th><th>probability</th></tr>
+<tr><td>red, blue</td><td>\(\tfrac35\cdot\tfrac24=0.3\)</td></tr>
+<tr><td>blue, red</td><td>\(\tfrac25\cdot\tfrac34=0.3\)</td></tr>
+</table>
+<p>The two orders have the same probability (and so do red-red and blue-blue with themselves), so the pair is exchangeable. But the draws are <em>not</em> independent: \(P(\text{2nd red}\mid\text{1st red})=2/4=0.5\), while \(P(\text{2nd red})=3/5=0.6\).</p>
+<div class="box intuition">
+<b>Why Example 2 matters for you</b>
+Suppose you have a fixed pool of 2,000 labeled patient notes and you <em>randomly</em> pick which ones go to calibration and which one plays "the new note". That is drawing without replacement from an urn. So the calibration notes and the new note are exchangeable, even though nothing is i.i.d. Random splitting of a fixed pool is the most common way exchangeability is achieved in practice.
+</div>
+
+<p><b>Example 3: not exchangeable.</b></p>
+<ul>
+<li><b>Drift over time.</b> Calibration notes are from 2019 and the new note is from 2025, after the hospital changed its documentation template. The new note's error tends to be larger. If you shuffled the list, you could tell (the big errors would move around), so it is not exchangeable.</li>
+<li><b>Different populations.</b> Calibration filings from banks, the new filing from a biotech firm.</li>
+<li><b>Selection.</b> The new note was sent to the model <em>because</em> a nurse found it confusing.</li>
+</ul>
+
+<p><b>A rule we will use constantly.</b> If \(Z_1,\dots,Z_m\) are exchangeable and \(s\) is a <em>fixed</em> function, then \(s(Z_1),\dots,s(Z_m)\) are exchangeable too: shuffling the \(Z\)'s shuffles the \(s(Z)\)'s in the same way. The word "fixed" is important. If \(s\) were built (trained) using \(Z_1,\dots,Z_{m-1}\) but not \(Z_m\), then \(Z_m\) would be treated differently and the rule breaks. This is why Lesson 2 trains the model and calibrates it on separate data.</p>
+
+<!-- ============================================================ -->
+<h2 id="s6">1.6 The rank lemma</h2>
+<p>Now the main fact. Take \(n+1\) numbers \(Z_1,\dots,Z_n,Z_{n+1}\). Think of the first \(n\) as old data and \(Z_{n+1}\) as the new point. The <b>rank</b> of \(Z_j\) is its position in the sorted list:</p>
+\[
+R_j \;=\; \#\{\,i\le n+1 : Z_i \le Z_j\,\}\qquad(\text{rank 1 = smallest}).
+\]
+
+<figure>
+<svg id="f3" width="640" height="130"></svg>
+<figcaption>Figure 3. Five old points split the line into six gaps. Under exchangeability the new point (orange) is equally likely to fall into each gap: probability \(1/6\) each.</figcaption>
+</figure>
+
+<div class="box def">
+<b>Rank lemma.</b>
+If \(Z_1,\dots,Z_{n+1}\) are exchangeable and have no ties, then the rank of the new point is uniform:
+\[
+P(R_{n+1}=k)\;=\;\frac{1}{n+1}\qquad\text{for each } k=1,2,\dots,n+1 .
+\]
+</div>
+<p><b>Intuition.</b> Write the \(n+1\) numbers on cards and shuffle. Which card is "the new one" is just a sticker. Since shuffling changes nothing, the stickered card is equally likely to be the smallest, the second smallest, ..., or the largest.</p>
+<p><b>Proof, in three steps.</b></p>
+<ol>
+<li><b>Every card has the same chance of rank \(k\).</b> Swap the labels of card \(j\) and card \(n+1\). By exchangeability, the joint distribution doesn't change, so the distribution of the ranks doesn't change either. Hence \(P(R_{n+1}=k)=P(R_j=k)\) for every \(j\).</li>
+<li><b>Exactly one card has rank \(k\).</b> With no ties, the ranks are \(1,\dots,n+1\) in some order, so \(\sum_{j=1}^{n+1}\mathbf 1\{R_j=k\}=1\). Taking expectations, \(\sum_{j=1}^{n+1}P(R_j=k)=1\).</li>
+<li><b>Divide.</b> We have \(n+1\) equal numbers adding up to 1, so each is \(1/(n+1)\). \(\square\)</li>
+</ol>
+<p>Notice what we did <em>not</em> use: the distribution of the \(Z\)'s, independence, or anything about a model. Only exchangeability.</p>
+
+<h3>The corollary that powers conformal prediction</h3>
+<p>Let \(Z_{(k)}^{\text{old}}\) be the \(k\)-th smallest of the <em>old</em> points \(Z_1,\dots,Z_n\). The new point is at most \(Z_{(k)}^{\text{old}}\) exactly when fewer than \(k\) old points are below it, which means its rank among all \(n+1\) is at most \(k\). Therefore</p>
+\[
+P\big(Z_{n+1}\le Z_{(k)}^{\text{old}}\big)\;=\;P(R_{n+1}\le k)\;=\;\sum_{j=1}^{k}\frac{1}{n+1}\;=\;\frac{k}{n+1}.
+\]
+<p>With ties, the left side can only be larger (a tie with the threshold still counts as "\(\le\)"), so in general \(P(Z_{n+1}\le Z_{(k)}^{\text{old}})\ge k/(n+1)\).</p>
+
+<div class="box intuition">
+<b>Back to the running example</b>
+The 10 errors are the old points; the new note's error is \(Z_{11}\). Sorted: 0.1, 0.3, 0.4, 0.7, 0.9, 1.0, 1.2, 1.8, 2.5, 3.1.
+<ul>
+<li>\(P(\text{new error}\le 2.5)=P(\le Z^{\text{old}}_{(9)})=9/11\approx 0.818\).</li>
+<li>\(P(\text{new error}\le 3.1)=P(\le Z^{\text{old}}_{(10)})=10/11\approx 0.909\).</li>
+</ul>
+To be at least 90% sure, we need \(k/11\ge 0.9\), i.e. \(k\ge 9.9\), so \(k=10\) and the threshold is <b>3.1</b>.
+<br>Careful: the "obvious" empirical 0.9-quantile of the 10 errors is \(Z_{(9)}=2.5\) (section 1.2), which only gives 81.8%. The new point is the 11th card, so we divide by \(n+1=11\), not by 10. That "+1" is exactly the formula \(\lceil(1-\alpha)(n+1)\rceil\) in Lesson 2.
+</div>
+
+<figure>
+<div class="controls">
+  <label>old points \(n\): <select id="f4n"><option>4</option><option selected>9</option><option>19</option></select></label>
+  <label><input id="f4shift" type="checkbox"> new point comes from a shifted distribution</label>
+  <button id="f4run">run 2000 trials</button>
+</div>
+<svg id="f4" width="640" height="300"></svg>
+<div class="readout" id="f4read"></div>
+<figcaption>Figure 4. Each trial draws \(n\) old points and one new point from a normal distribution, and records the new point's rank. Bars: how often each rank occurred. Dashed line: the rank lemma's \(1/(n+1)\). Tick the box to draw the new point from a distribution shifted up by 1: exchangeability fails and high ranks become much more common.</figcaption>
+</figure>
+
+<!-- ============================================================ -->
+<h2 id="sum">Summary</h2>
+<ul>
+<li><b>CDF</b> \(F(t)=P(X\le t)\); the <b>empirical CDF</b> \(\hat F_n\) is the fraction of data \(\le t\), a binomial count with error about \(1/\sqrt n\).</li>
+<li>The <b>\(\tau\)-quantile</b> is the smallest \(t\) with \(F(t)\ge\tau\); the empirical one is the order statistic \(X_{(\lceil n\tau\rceil)}\).</li>
+<li><b>PIT:</b> \(F(X)\) is uniform, so rank statements are the same for every distribution (distribution-free).</li>
+<li><b>Exchangeable</b> = "shuffling changes nothing". It is weaker than i.i.d. Random splitting of a fixed pool gives it; drift, different populations and selection break it. Fixed functions of exchangeable data stay exchangeable.</li>
+<li><b>Rank lemma:</b> the new point's rank is uniform on \(\{1,\dots,n+1\}\), so \(P(Z_{n+1}\le Z^{\text{old}}_{(k)})\ge k/(n+1)\). Lesson 2 builds conformal prediction on this single line.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="quiz">Quiz</h2>
+<p>Try each one before opening the answer.</p>
+
+<details><summary>1. Data: 2, 5, 5, 7, 9, 11, 14, 20. What is \(\hat F_8(7)\)? What is \(\hat F_8(6.9)\)?</summary>
+Values \(\le 7\): 2, 5, 5, 7, so \(\hat F_8(7)=4/8=0.5\). Values \(\le 6.9\): 2, 5, 5, so \(3/8=0.375\). The staircase jumps at 7, and the jump includes 7.</details>
+
+<details><summary>2. Same data. What is the empirical 0.8-quantile? The 0.3-quantile?</summary>
+0.8: \(\lceil 8\cdot 0.8\rceil=\lceil 6.4\rceil=7\), the 7th smallest is <b>14</b>. 0.3: \(\lceil 2.4\rceil=3\), the 3rd smallest is <b>5</b>.</details>
+
+<details><summary>3. You pick 5 documents at random, without replacement, from a pool of 100. Are the 5 picks exchangeable? Independent?</summary>
+Exchangeable: yes (it is the urn example; every order of the same 5 documents is equally likely). Independent: no; once a document is picked it cannot appear again, so the first pick changes the odds for the second.</details>
+
+<details><summary>4. Calibration notes come from January to June, and the new note from December, after a new coding standard was introduced. Why might exchangeability fail? What would you see in Figure 4?</summary>
+The new note's error comes from a different distribution (the model was built before the new standard), so swapping it with an old note changes the joint distribution. In Figure 4 this looks like the "shifted" case: the new point's rank piles up at the top, so thresholds taken from old data are exceeded more often than promised.</details>
+
+<details><summary>5. You have \(n=19\) old points with no ties. What is \(P(Z_{20}\le Z^{\text{old}}_{(19)})\)? And \(P(Z_{20}\le Z^{\text{old}}_{(18)})\)?</summary>
+\(19/20=0.95\) and \(18/20=0.90\).</details>
+
+<details><summary>6. What is the smallest \(n\) for which <em>some</em> old point is a threshold that the new point stays below with probability at least 0.95?</summary>
+The best threshold is the maximum, \(k=n\), giving \(n/(n+1)\). We need \(n/(n+1)\ge 0.95\iff n\ge 19\). With fewer than 19 points, no data-based threshold can promise 95%.</details>
+
+<details><summary>7. \(X\sim\) Exp(1). What is the distribution of \(1-e^{-X}\)? And of \(e^{-X}\)?</summary>
+\(1-e^{-X}=F(X)\) is uniform on \([0,1]\) by the PIT. Then \(e^{-X}=1-U\) is also uniform (flipping a uniform gives a uniform).</details>
+
+<details><summary>8. In one sentence: why does the rank lemma not depend on the distribution of the data?</summary>
+Its proof only uses the symmetry from exchangeability (every card is equally likely to have each rank) and the fact that exactly one card has each rank; the actual values never enter.</details>
+
+<details><summary>9. (Preview of Lesson 2.) You train a model on notes 1 to 10 and then use its errors on <em>the same</em> notes as the old points. Why is the rank lemma no longer valid for the error on a new note?</summary>
+The errors on training notes are produced by a model that has seen those notes, so they tend to be smaller than the error on a new note it hasn't seen. The new note is treated differently, so the errors are not exchangeable, and the new error tends to rank high (like the shifted case in Figure 4).</details>
+
+<script>
+// ---------- Figure 1: empirical CDF and quantile ----------
+(function () {
+  const ours = [0.3, 1.2, 0.7, 2.5, 0.1, 0.9, 1.8, 0.4, 3.1, 1.0];
+  let draws = [];
+  const newDraws = () => { draws = Array.from({ length: 100 }, () => -Math.log(1 - Math.random())); };
+  newDraws();
+  const svg = document.getElementById('f1'), sel = document.getElementById('f1data'),
+        tau = document.getElementById('f1tau');
+  function draw() {
+    const t = +tau.value, isOurs = sel.value === 'ours', data = isOurs ? ours : draws;
+    const xs = sortNum(data), n = xs.length, xmax = isOurs ? 3.5 : Math.max(5, xs[n - 1] + 0.3);
+    document.getElementById('f1tauv').textContent = t.toFixed(2);
+    const P = frame(svg, [0, xmax], [0, 1], { xt: isOurs ? [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5] : [0, 1, 2, 3, 4, 5],
+      yt: [0, 0.2, 0.4, 0.6, 0.8, 1], xl: 'error t', yl: 'fraction ≤ t' });
+    if (!isOurs) {
+      let d = '';
+      for (let i = 0; i <= 200; i++) { const x = xmax * i / 200; d += (i ? 'L' : 'M') + P.X(x) + ',' + P.Y(1 - Math.exp(-x)); }
+      el('path', { d, fill: 'none', stroke: COL.ink2, 'stroke-dasharray': '4 3' }, svg);
+    }
+    // staircase: height k/n on [x_(k), x_(k+1))
+    const pts = [0].concat(xs, [xmax]);
+    for (let k = 0; k <= n; k++) {
+      el('line', { x1: P.X(pts[k]), x2: P.X(pts[k + 1]), y1: P.Y(k / n), y2: P.Y(k / n), stroke: COL.blue, 'stroke-width': 2 }, svg);
+      if (k >= 1 && isOurs) {
+        tip(el('circle', { cx: P.X(pts[k]), cy: P.Y(k / n), r: 4, fill: COL.blue }, svg), `X(${k}) = ${xs[k - 1]}, F̂ = ${k}/${n}`);
+        el('circle', { cx: P.X(pts[k]), cy: P.Y((k - 1) / n), r: 3.5, fill: '#fff', stroke: COL.blue }, svg);
+      }
+    }
+    const k = ceil(n * t), q = xs[k - 1];
+    el('line', { x1: P.X(0), x2: P.X(q), y1: P.Y(t), y2: P.Y(t), stroke: COL.orange, 'stroke-width': 2, 'stroke-dasharray': '6 3' }, svg);
+    el('line', { x1: P.X(q), x2: P.X(q), y1: P.Y(t), y2: P.Y(0), stroke: COL.orange, 'stroke-width': 2, 'stroke-dasharray': '6 3' }, svg);
+    label(svg, P.X(q) + 6, P.Y(0) - 8, 'q̂ = ' + q.toFixed(2), { fill: COL.ink });
+    document.getElementById('f1read').textContent =
+      `n = ${n}, τ = ${t.toFixed(2)}: k = ⌈n·τ⌉ = ⌈${(n * t).toFixed(1)}⌉ = ${k}, so q̂ = X(${k}) = ${q.toFixed(2)}.` +
+      (isOurs ? '' : ` True quantile −ln(1−τ) = ${t < 1 ? (-Math.log(1 - t)).toFixed(2) : '∞'}.`);
+  }
+  sel.onchange = tau.oninput = draw;
+  document.getElementById('f1new').onclick = () => { newDraws(); draw(); };
+  draw();
+})();
+
+// ---------- Figure 2: probability integral transform ----------
+(function () {
+  function draw() {
+    const x = Array.from({ length: 2000 }, () => -Math.log(1 - Math.random()));
+    const u = x.map(v => 1 - Math.exp(-v));
+    let P = frame(document.getElementById('f2a'), [0, 5], [0, 450], { xt: [0, 1, 2, 3, 4, 5], yt: [0, 200, 400], xl: 'X ~ Exp(1)', yl: 'count', margin: { l: 46 } });
+    hist(document.getElementById('f2a'), P, x, 0, 5, 0.25, COL.blue);
+    P = frame(document.getElementById('f2b'), [0, 1], [0, 450], { xt: [0, 0.5, 1], yt: [0, 200, 400], xl: 'U = 1 − e^(−X)', yl: 'count', margin: { l: 46 } });
+    hist(document.getElementById('f2b'), P, u, 0, 1, 0.05, COL.blue);
+    el('line', { x1: P.X(0), x2: P.X(1), y1: P.Y(100), y2: P.Y(100), stroke: COL.ink2, 'stroke-dasharray': '4 3' }, document.getElementById('f2b'));
+  }
+  document.getElementById('f2new').onclick = draw;
+  draw();
+})();
+
+// ---------- Figure 3: n+1 gaps ----------
+(function () {
+  const svg = document.getElementById('f3'), pts = [90, 200, 260, 410, 520], y = 70;
+  el('line', { x1: 30, x2: 610, y1: y, y2: y, stroke: COL.ink2 }, svg);
+  const edges = [30].concat(pts, [610]);
+  for (let g = 0; g < 6; g++) {
+    const xm = (edges[g] + edges[g + 1]) / 2;
+    label(svg, xm, y + 30, '1/6', { 'text-anchor': 'middle', fill: COL.ink2 });
+    label(svg, xm, y + 46, 'rank ' + (g + 1), { 'text-anchor': 'middle', fill: COL.ink2, style: 'font-size:11px' });
+  }
+  pts.forEach((p, i) => { el('circle', { cx: p, cy: y, r: 6, fill: COL.blue }, svg); label(svg, p, y - 12, 'Z(' + (i + 1) + ')', { 'text-anchor': 'middle' }); });
+  el('path', { d: `M335,22 L335,${y - 10}`, stroke: COL.orange, 'stroke-width': 2 }, svg);
+  el('polygon', { points: `329,${y - 16} 341,${y - 16} 335,${y - 6}`, fill: COL.orange }, svg);
+  label(svg, 345, 26, 'new point: which gap?', { fill: COL.ink });
+})();
+
+// ---------- Figure 4: rank simulation ----------
+(function () {
+  const svg = document.getElementById('f4');
+  function run() {
+    const n = +document.getElementById('f4n').value, shift = document.getElementById('f4shift').checked ? 1 : 0, T = 2000;
+    const counts = new Array(n + 1).fill(0);
+    for (let t = 0; t < T; t++) {
+      const z = randn() + shift; let r = 1;
+      for (let i = 0; i < n; i++) if (randn() < z) r++;
+      counts[r - 1]++;
+    }
+    const freq = counts.map(c => c / T), ymax = Math.max(0.5, Math.max(...freq) * 1.15);
+    const P = frame(svg, [0.5, n + 1.5], [0, ymax], { xt: Array.from({ length: n + 1 }, (_, i) => i + 1).filter(k => n < 15 || k % 2 === 1),
+      yt: [0, 0.1, 0.2, 0.3, 0.4, 0.5].filter(v => v <= ymax), xl: 'rank of the new point among n + 1', yl: 'fraction of trials' });
+    freq.forEach((f, i) => tip(el('rect', { x: P.X(i + 0.6), y: P.Y(f), width: P.X(1.8) - P.X(1), height: P.Y(0) - P.Y(f), fill: shift ? COL.orange : COL.blue }, svg),
+      `rank ${i + 1}: ${(100 * f).toFixed(1)}%`));
+    el('line', { x1: P.X(0.5), x2: P.X(n + 1.5), y1: P.Y(1 / (n + 1)), y2: P.Y(1 / (n + 1)), stroke: COL.ink, 'stroke-dasharray': '5 3' }, svg);
+    label(svg, P.X(n + 1.5) - 4, P.Y(1 / (n + 1)) - 6, '1/(n+1) = ' + (1 / (n + 1)).toFixed(3), { 'text-anchor': 'end' });
+    const below = 1 - freq[n];
+    document.getElementById('f4read').textContent =
+      `Fraction of trials where the new point ≤ the largest old point (rank ≤ n): ${(100 * below).toFixed(1)}%. Rank lemma (no shift): n/(n+1) = ${(100 * n / (n + 1)).toFixed(1)}%.`;
+  }
+  document.getElementById('f4run').onclick = run;
+  document.getElementById('f4n').onchange = run;
+  document.getElementById('f4shift').onchange = run;
+  run();
+})();
+</script>
+</body>
+</html>

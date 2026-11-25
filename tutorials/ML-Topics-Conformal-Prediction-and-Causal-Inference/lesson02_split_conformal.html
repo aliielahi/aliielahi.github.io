@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 2: Split conformal prediction</title>
+<script>window.MathJax = { tex: { tags: 'ams' }, svg: { fontCache: 'global' } };</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<link rel="stylesheet" href="lessons.css">
+<script src="plot.js"></script>
+</head>
+<body>
+
+<h1>Lesson 2: Split conformal prediction</h1>
+<p class="meta">About 60 minutes. Conformal prediction and causal inference series, lesson 2 of 16. Needs Lesson 1 (quantiles, exchangeability, the rank lemma).</p>
+
+<div class="box">
+<b>Why this lesson</b>
+Your risk-extraction model gives one answer per document: a severity score, or a risk type. It doesn't tell you how much to trust that answer. Split conformal prediction wraps <em>any</em> model, even an LLM you can only call through an API, and turns its single answer into a <b>set of answers</b> (a range of scores, or a few risk types) that contains the truth with a probability you choose, say 90%. The guarantee needs no assumptions about the model or the data distribution; it only needs exchangeability. This is the base that every later lesson builds on.
+</div>
+
+<p><b>Contents.</b>
+<a href="#s1">2.1 The goal</a> ·
+<a href="#s2">2.2 The recipe</a> ·
+<a href="#s3">2.3 The guarantee and its proof</a> ·
+<a href="#s4">2.4 Why split the data?</a> ·
+<a href="#s5">2.5 Interactive demo</a> ·
+<a href="#s6">2.6 What "90%" does and doesn't mean</a> ·
+<a href="#s7">2.7 Classification: sets of labels</a> ·
+<a href="#s8">2.8 How much calibration data?</a> ·
+<a href="#s9">2.9 Checklist</a> ·
+<a href="#sum">Summary</a> · <a href="#quiz">Quiz</a></p>
+
+<!-- ============================================================ -->
+<h2 id="s1">2.1 The goal in plain words</h2>
+<p>We have a model \(\hat f\) that takes an input \(x\) (a document) and outputs a guess. We want a <b>prediction set</b> \(C(x)\): a range of values, or a set of labels, such that for a new document</p>
+\[
+P\big(Y_{\text{new}} \in C(X_{\text{new}})\big) \;\ge\; 1-\alpha .
+\]
+<ul>
+<li>\(\alpha\) is the error rate you are willing to accept. \(\alpha=0.1\) means "the set must contain the true answer at least 90% of the time".</li>
+<li>\(Y_{\text{new}}\) is the true answer (for example, the doctor's rating), which we don't see at prediction time.</li>
+<li>We want the set to be <em>small</em> when the model is confident and <em>large</em> when it isn't. A set that always contains everything is valid but useless.</li>
+</ul>
+<p>Two examples we will use:</p>
+<ul>
+<li><b>A (regression):</b> predict a patient's severity score \(y\in[0,10]\) from their note. The set is an interval.</li>
+<li><b>B (classification):</b> label the main risk in a paragraph of a financial filing as one of {Credit, Liquidity, Market, Operational, Legal}. The set is a group of labels.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="s2">2.2 The recipe</h2>
+<div class="flow">
+  <div>labeled data</div><span>→ split →</span>
+  <div>training set: fit \(\hat f\)<br><small>(or use a ready-made LLM)</small></div><span>+</span>
+  <div>calibration set: \(n\) points<br><small>never used for training</small></div><span>→</span>
+  <div>scores \(s_1,\dots,s_n\)</div><span>→</span>
+  <div>threshold \(\hat q\)</div><span>→</span>
+  <div>set \(C(x)=\{y: s(x,y)\le\hat q\}\)</div>
+</div>
+
+<div class="box def">
+<b>Split conformal prediction.</b>
+<ol>
+<li><b>Split</b> the labeled data into a training part (used to build \(\hat f\)) and a calibration part \((X_1,Y_1),\dots,(X_n,Y_n)\) that the model has never seen.</li>
+<li><b>Choose a score</b> \(s(x,y)\): a number saying how badly the answer \(y\) disagrees with the model at input \(x\). Large = bad. For regression the usual choice is \(s(x,y)=|y-\hat f(x)|\).</li>
+<li><b>Score the calibration set:</b> \(s_i=s(X_i,Y_i)\) for \(i=1,\dots,n\).</li>
+<li><b>Take the threshold</b>
+\[
+k=\big\lceil (1-\alpha)(n+1)\big\rceil,\qquad \hat q = s_{(k)}\ \ (\text{the } k\text{-th smallest score}).
+\]
+If \(k&gt;n\), set \(\hat q=+\infty\) (not enough data; the set is everything).</li>
+<li><b>Predict:</b> for a new input \(x\), output every answer whose score is within the threshold,
+\[
+C(x)=\{\,y : s(x,y)\le \hat q\,\}.
+\]
+With \(s=|y-\hat f(x)|\) this is simply the interval \([\hat f(x)-\hat q,\ \hat f(x)+\hat q]\).</li>
+</ol>
+</div>
+
+<p><b>Worked example (the running example from Lesson 1).</b> The 10 calibration errors were 0.3, 1.2, 0.7, 2.5, 0.1, 0.9, 1.8, 0.4, 3.1, 1.0; sorted: 0.1, 0.3, 0.4, 0.7, 0.9, 1.0, 1.2, 1.8, 2.5, 3.1. A new note arrives and the model predicts \(\hat f(x)=6.2\).</p>
+<table>
+<tr><th>\(\alpha\)</th><th>\(k=\lceil(1-\alpha)\cdot 11\rceil\)</th><th>\(\hat q=s_{(k)}\)</th><th>interval</th><th>guaranteed coverage \(k/11\)</th></tr>
+<tr><td>0.1</td><td>\(\lceil 9.9\rceil=10\)</td><td>3.1</td><td>[3.1, 9.3]</td><td>0.909</td></tr>
+<tr><td>0.2</td><td>\(\lceil 8.8\rceil=9\)</td><td>2.5</td><td>[3.7, 8.7]</td><td>0.818</td></tr>
+<tr><td>0.5</td><td>\(\lceil 5.5\rceil=6\)</td><td>1.0</td><td>[5.2, 7.2]</td><td>0.545</td></tr>
+</table>
+<p>The intervals are wide because 10 calibration notes is very little. Section 2.8 shows how this improves with more data.</p>
+
+<!-- ============================================================ -->
+<h2 id="s3">2.3 The guarantee and its proof</h2>
+<div class="box def">
+<b>Theorem (coverage of split conformal).</b>
+Suppose the calibration points and the new point \((X_1,Y_1),\dots,(X_n,Y_n),(X_{n+1},Y_{n+1})\) are exchangeable, and the score function \(s\) was fixed without using them. Then
+\[
+P\big(Y_{n+1}\in C(X_{n+1})\big)\;\ge\;1-\alpha .
+\]
+If in addition the scores have no ties, then also
+\[
+P\big(Y_{n+1}\in C(X_{n+1})\big)\;\le\;1-\alpha+\frac{1}{n+1}.
+\]
+</div>
+<p><b>Proof.</b> We only need Lesson 1.</p>
+<ol>
+<li><b>The scores are exchangeable.</b> \(s\) is a fixed function (the model was trained on other data), and fixed functions of exchangeable points are exchangeable (Lesson 1, §1.5). So \(s_1,\dots,s_n,s_{n+1}\) are exchangeable, where \(s_{n+1}=s(X_{n+1},Y_{n+1})\) is the score of the new point's <em>true</em> answer.</li>
+<li><b>Coverage is a rank event.</b> By definition, \(Y_{n+1}\in C(X_{n+1})\) exactly when \(s_{n+1}\le\hat q=s_{(k)}\): the new score is at most the \(k\)-th smallest calibration score.</li>
+<li><b>Apply the rank lemma's corollary</b> (Lesson 1, §1.6): \(P(s_{n+1}\le s_{(k)})\ge k/(n+1)\), with equality if there are no ties.</li>
+<li><b>Lower bound.</b> \(k=\lceil(1-\alpha)(n+1)\rceil\ge(1-\alpha)(n+1)\), so \(k/(n+1)\ge 1-\alpha\).</li>
+<li><b>Upper bound.</b> A ceiling adds less than 1: \(k&lt;(1-\alpha)(n+1)+1\), so \(k/(n+1)&lt;1-\alpha+1/(n+1)\). \(\square\)</li>
+</ol>
+<div class="box intuition">
+<b>What just happened</b>
+The model, the score and the data distribution never entered the proof. The model only decides <em>how large</em> the sets are: a good model gives small scores, hence a small \(\hat q\) and tight sets; a bad model gives wide sets. The 90% is guaranteed either way. And the upper bound says the method doesn't waste coverage: with \(n=1000\) and \(\alpha=0.1\), coverage is between 90% and 90.1%.
+</div>
+<p><b>Why "\(n+1\)"?</b> The new point is the \((n+1)\)-th card in the deck. Its rank is uniform over \(n+1\) positions, not \(n\). Using the plain empirical quantile \(s_{(\lceil(1-\alpha)n\rceil)}\) would give slightly less than \(1-\alpha\) (in the worked example, 81.8% instead of 90%).</p>
+
+<!-- ============================================================ -->
+<h2 id="s4">2.4 Why split the data?</h2>
+<p>Step 1 of the proof needs the score function to be fixed before we look at the calibration and test points. What if we skipped the split and computed scores on the training data?</p>
+<p><b>Extreme example.</b> Take a "model" that memorizes: for any training note it returns the doctor's exact rating (a 1-nearest-neighbor model does this). Every training error is 0, so \(\hat q=0\) and the interval is a single point. On a new note the error is not 0, so coverage is close to 0%, not 90%. Training errors are too optimistic because the model has already seen those answers.</p>
+<p>Less extreme models overfit less, but the direction is always the same: errors on seen data are smaller than errors on new data, so the threshold is too small and coverage falls short. The split removes this problem by giving the model no chance to see the calibration answers.</p>
+<p><b>Full conformal prediction</b> (the original version of the method) avoids splitting by refitting the model with the new point included, once for every candidate answer \(y\). That keeps everything symmetric and uses all data, but costs one refit per candidate. Split conformal is the practical default, especially for LLMs, which you cannot refit at all. The cost of splitting is fewer points for training; in practice a few hundred to a few thousand calibration points are enough.</p>
+
+<!-- ============================================================ -->
+<h2 id="s5">2.5 Interactive demo</h2>
+<p>Simulated data for example A. The input \(x\) is the length of the note in pages (0 to 10). Longer notes describe more complicated patients, so the true severity is noisier there. The model \(\hat f\) is a slightly-off straight line. We calibrate on \(n\) notes and test on 1,000 fresh notes.</p>
+<figure>
+<div class="controls">
+  <label>\(\alpha\) = <input id="d1a" type="range" min="0.05" max="0.3" step="0.01" value="0.1"> <span id="d1av"></span></label>
+  <label>calibration size \(n\): <select id="d1n"><option>20</option><option selected>200</option><option>2000</option></select></label>
+  <button id="d1new">new data</button>
+</div>
+<svg id="d1L" width="440" height="320"></svg><svg id="d1R" width="300" height="320"></svg>
+<div class="readout" id="d1read"></div>
+<figcaption>Figure 1. Left: 1,000 test notes, the model (black line) and the conformal band \(\hat f(x)\pm\hat q\) (shaded). Blue dots are covered; orange dots fall outside. Right: histogram of the \(n\) calibration scores \(|y-\hat f(x)|\); the orange line is \(\hat q\), the \(k\)-th smallest. Move \(\alpha\) and watch \(\hat q\) slide along the histogram. Below: coverage overall and for short, medium and long notes.</figcaption>
+</figure>
+<p>Things to notice:</p>
+<ul>
+<li>Overall test coverage lands close to \(1-\alpha\) for every \(\alpha\) and every \(n\). It can land a little <em>below</em> \(1-\alpha\) on one click (say 89%) and above on the next: the guarantee is an average over calibration sets. With \(n=20\) it wobbles much more (section 2.6 explains exactly how much).</li>
+<li>The band has the <b>same width everywhere</b>, because the score \(|y-\hat f(x)|\) doesn't know which notes are harder. So short notes are covered almost always, while long notes are covered much less than 90%. The overall 90% is an average of the two. Lesson 3 fixes this with better scores.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="s6">2.6 What "90%" does and doesn't mean</h2>
+<p>The probability in the theorem is over <b>two</b> random things: which calibration set you happened to draw, and which new point arrives. This is called <b>marginal coverage</b>. Two common misreadings:</p>
+
+<h3>Misreading 1: "With my calibration set, exactly 90% of future points will be covered."</h3>
+<p>Once your calibration set is drawn, \(\hat q\) is fixed and the coverage for future points is the number \(c(\hat q)=P(s_{\text{new}}\le\hat q\mid\hat q)=F(\hat q)\), where \(F\) is the true CDF of the scores. This number is itself random, because \(\hat q\) depends on the calibration draw. How random?</p>
+<p>By the PIT (Lesson 1, Fact B), \(F(s_1),\dots,F(s_n)\) are \(n\) uniform numbers, and \(F(\hat q)=F(s_{(k)})\) is the \(k\)-th smallest of them. A standard result says that the \(k\)-th smallest of \(n\) uniforms has a Beta distribution:</p>
+\[
+c(\hat q)\ \sim\ \mathrm{Beta}\big(k,\ n+1-k\big),\qquad
+\mathbb E[c]=\frac{k}{n+1},\qquad
+\mathrm{sd}[c]=\sqrt{\frac{k\,(n+1-k)}{(n+1)^2\,(n+2)}} .
+\]
+<p>Again this doesn't depend on the score distribution. For \(\alpha=0.1\):</p>
+<table>
+<tr><th>\(n\)</th><th>\(k\)</th><th>mean coverage</th><th>sd</th><th>typical range (± 2 sd)</th></tr>
+<tr><td>20</td><td>19</td><td>0.905</td><td>0.063</td><td>0.78 to 1.00</td></tr>
+<tr><td>100</td><td>91</td><td>0.901</td><td>0.030</td><td>0.84 to 0.96</td></tr>
+<tr><td>1000</td><td>901</td><td>0.900</td><td>0.009</td><td>0.88 to 0.92</td></tr>
+</table>
+<figure>
+<div class="controls">
+  <label>calibration size \(n\): <select id="d2n"><option>20</option><option selected>100</option><option>1000</option></select></label>
+  <label>score distribution: <select id="d2d"><option value="exp">Exp(1)</option><option value="abs">|Normal(0,1)|</option><option value="unif">Uniform(0,1)</option></select></label>
+  <button id="d2run">run 2000 calibration sets</button>
+</div>
+<svg id="d2" width="640" height="300"></svg>
+<div class="readout" id="d2read"></div>
+<figcaption>Figure 2. Each run draws a calibration set of size \(n\), computes \(\hat q\) with \(\alpha=0.1\), and records the exact coverage \(F(\hat q)\) that this \(\hat q\) gives on future points. The histogram is over 2,000 calibration sets; the dashed line is 0.9. Change the score distribution: the histogram doesn't change (distribution-free). Change \(n\): it narrows like \(1/\sqrt n\).</figcaption>
+</figure>
+
+<h3>Misreading 2: "Each patient has a 90% chance of being covered."</h3>
+<p>The guarantee is an average over all patients. For particular kinds of patients (long notes, rare diseases, a specific hospital) coverage can be much lower or higher, as Figure 1 showed. Coverage that holds for every \(x\),</p>
+\[
+P\big(Y\in C(X)\mid X=x\big)\ \ge\ 1-\alpha\quad\text{for all } x,
+\]
+<p>is called <b>conditional coverage</b>. It is much stronger, and it turns out to be impossible to guarantee exactly without assumptions, using finite data. Lesson 3 shows how to get closer (better scores, and coverage guaranteed within chosen groups).</p>
+
+<!-- ============================================================ -->
+<h2 id="s7">2.7 Classification: sets of labels</h2>
+<p>Most classifiers (and LLMs, if you ask for label probabilities) output a probability \(\hat p_y(x)\) for each label \(y\). A natural score is</p>
+\[
+s(x,y)=1-\hat p_y(x)\qquad(\text{small when the model gives the true label high probability}).
+\]
+<p>The set \(\{y: s(x,y)\le\hat q\}\) becomes</p>
+\[
+C(x)=\{\,y : \hat p_y(x)\ \ge\ 1-\hat q\,\}:\quad\text{"every label the model gives at least } 1-\hat q \text{ probability"}.
+\]
+
+<p><b>Worked example (example B).</b> We have \(n=19\) calibration paragraphs. For each, the score is 1 minus the probability the model gave to the <em>correct</em> risk type. Sorted:</p>
+<p style="text-align:center">0.02, 0.05, 0.08, 0.10, 0.12, 0.15, 0.18, 0.20, 0.22, 0.25, 0.30, 0.33, 0.38, 0.45, 0.52, 0.60, 0.68, <b>0.75</b>, 0.91</p>
+<p>With \(\alpha=0.1\): \(k=\lceil 0.9\cdot 20\rceil=18\), so \(\hat q=0.75\), and the set contains every label with probability \(\ge 0.25\). Three new paragraphs:</p>
+<table>
+<tr><th>paragraph</th><th>Credit</th><th>Liquidity</th><th>Market</th><th>Operational</th><th>Legal</th><th>set (\(\hat p\ge 0.25\))</th></tr>
+<tr><td>A</td><td>0.70</td><td>0.20</td><td>0.05</td><td>0.03</td><td>0.02</td><td>{Credit}</td></tr>
+<tr><td>B</td><td>0.38</td><td>0.33</td><td>0.17</td><td>0.07</td><td>0.05</td><td>{Credit, Liquidity}</td></tr>
+<tr><td>C</td><td>0.24</td><td>0.22</td><td>0.20</td><td>0.18</td><td>0.16</td><td>{ } (empty)</td></tr>
+</table>
+<ul>
+<li><b>Set size is an uncertainty signal.</b> A: the model is sure. B: it hesitates between two types. That is useful in practice: send paragraphs with set size ≠ 1 to a human reviewer.</li>
+<li><b>Empty sets are allowed.</b> C gets an empty set: not even the top label is plausible enough. The guarantee still holds on average (empty sets are counted as misses, and the threshold accounts for them). In practice, an empty set is a red flag: an unusual paragraph, also worth sending to a human.</li>
+<li><b>One true label per paragraph.</b> Here each paragraph has a single main risk. When a document can contain <em>several</em> risks at once (the usual case in risk extraction), "the set contains the truth" is replaced by "the set misses few of the true risks". That is conformal risk control, Lesson 4.</li>
+</ul>
+<figure>
+<div class="controls"><label>threshold \(\hat q\) = <input id="d3q" type="range" min="0.3" max="0.95" step="0.01" value="0.75"> <span id="d3qv"></span></label></div>
+<svg id="d3" width="660" height="260"></svg>
+<figcaption>Figure 3. The model's label probabilities for paragraphs A, B and C. Labels above the dashed line \(1-\hat q\) are in the set (blue); the others are out (gray). Larger \(\hat q\) (smaller \(\alpha\)) lowers the line and grows the sets.</figcaption>
+</figure>
+
+<!-- ============================================================ -->
+<h2 id="s8">2.8 How much calibration data?</h2>
+<ul>
+<li><b>To get a finite set at all</b>, we need \(k\le n\): \(\lceil(1-\alpha)(n+1)\rceil\le n\), which works out to \(n\ge 1/\alpha-1\). So \(\alpha=0.1\) needs \(n\ge 9\), \(\alpha=0.05\) needs \(n\ge 19\), \(\alpha=0.01\) needs \(n\ge 99\).</li>
+<li><b>To make the coverage of <em>your</em> calibration set reliable</b> (section 2.6), the spread is about \(\sqrt{\alpha(1-\alpha)/n}\). For \(\alpha=0.1\): \(n=100\) gives ±3%, \(n=1000\) gives ±1%.</li>
+<li><b>Labels cost money.</b> In medical and financial extraction, a label is an expert's time. A few hundred carefully labeled calibration documents already give a usable guarantee, and they can be reused for every model you try, as long as they never touch training.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="s9">2.9 Checklist: what breaks the guarantee</h2>
+<ul>
+<li><b>Calibration data used for training or tuning</b> the model (including early stopping or prompt selection). The scores are no longer exchangeable with the new point's score.</li>
+<li><b>Choosing \(\alpha\), the score or the calibration set after looking at test results</b>, then reporting the best one. Each choice is valid alone; picking the best afterwards is not.</li>
+<li><b>Calibration from a different population</b> than deployment (another hospital, another year, another industry). Exchangeability fails; Lesson 8 shows how to reweight.</li>
+<li><b>Reading it as per-patient coverage.</b> It is an average (section 2.6).</li>
+<li><b>Noisy labels.</b> The guarantee is about the labels <em>as recorded</em>. If doctors disagree, "covered" means "covers this doctor's rating".</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="sum">Summary</h2>
+<ul>
+<li>Split conformal: train on one part, score the calibration part with a fixed \(s(x,y)\), set \(\hat q\) to the \(\lceil(1-\alpha)(n+1)\rceil\)-th smallest score, and predict \(C(x)=\{y: s(x,y)\le\hat q\}\).</li>
+<li>Guarantee: \(1-\alpha\le P(Y_{n+1}\in C(X_{n+1}))\le 1-\alpha+\frac1{n+1}\). The proof is the rank lemma; nothing about the model or distribution is needed, only exchangeability.</li>
+<li>The model and score affect only the <em>size</em> of the sets. The split is essential: scores on training data are too small.</li>
+<li>The guarantee is <b>marginal</b>. For a fixed calibration set, coverage is Beta\((k,n+1-k)\), with spread about \(\sqrt{\alpha(1-\alpha)/n}\). It is not conditional on \(x\): some groups can be badly under-covered.</li>
+<li>Classification: \(C(x)=\{y:\hat p_y(x)\ge 1-\hat q\}\). Set size measures uncertainty; empty and large sets are natural triggers for human review.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="quiz">Quiz</h2>
+<details><summary>1. You have \(n=49\) calibration scores and want 90% coverage. Which order statistic is \(\hat q\)? What are the guaranteed lower and upper bounds on coverage (no ties)?</summary>
+\(k=\lceil 0.9\cdot 50\rceil=45\), so \(\hat q=s_{(45)}\). Coverage is exactly \(45/50=0.90\), so lower bound 0.90 and upper bound \(0.9+1/50=0.92\) (the exact value 0.90 is within both).</details>
+
+<details><summary>2. You have only \(n=4\) calibration points and \(\alpha=0.1\). What does split conformal output?</summary>
+\(k=\lceil 0.9\cdot 5\rceil=\lceil 4.5\rceil=5&gt;4\), so \(\hat q=+\infty\) and the set is every possible answer. With 4 points, no data-based threshold can promise 90%: the best is the maximum, which gives \(4/5=80\%\).</details>
+
+<details><summary>3. A colleague computes the scores on the model's training data "to save labels". What goes wrong, and in which direction?</summary>
+Training errors are smaller than errors on new data (the model has seen those answers). So \(\hat q\) is too small, the sets too narrow, and coverage <em>below</em> \(1-\alpha\). In the extreme (a memorizing model) coverage goes to about 0.</details>
+
+<details><summary>4. You replace your model with one that outputs random numbers. Does split conformal still give 90% coverage? What changes?</summary>
+Yes, coverage is still at least 90%: the proof never used the model's quality. What changes is the size: the scores are large, so \(\hat q\) is large and the sets are very wide (close to useless).</details>
+
+<details><summary>5. Overall coverage on your test set is 90%, but for notes longer than 8 pages it is 74%. Does this contradict the theorem?</summary>
+No. The theorem promises 90% on average over all notes (marginal coverage). Long notes can be under-covered as long as other notes are over-covered. Fixing this needs better scores or group-wise calibration (Lesson 3).</details>
+
+<details><summary>6. Classification with \(\hat q=0.6\). A paragraph gets probabilities Credit 0.45, Liquidity 0.40, Market 0.10, Operational 0.03, Legal 0.02. What is the set? What if \(\hat q=0.5\)?</summary>
+\(\hat q=0.6\): include labels with \(\hat p\ge 0.4\): {Credit, Liquidity}. \(\hat q=0.5\): include \(\hat p\ge 0.5\): no label qualifies, so the set is empty.</details>
+
+<details><summary>7. With \(n=100\) and \(\alpha=0.1\), you evaluate on a huge test set and get 87% coverage. Is your implementation broken?</summary>
+Not necessarily. For a single calibration set, coverage is Beta(91, 10), with mean 0.90 and sd 0.03. 87% is one sd below the mean, which happens often. (If you got 70%, or got 87% again and again with fresh calibration sets, then something is wrong.)</details>
+
+<details><summary>8. Why does step 1 of the proof need the model to be trained on separate data? Answer in terms of exchangeability.</summary>
+The scores \(s_1,\dots,s_{n+1}\) are exchangeable only if the same fixed function is applied to each point. If the model were trained on the calibration points but not the new point, the function would treat them differently (it has seen their answers), so swapping a calibration point with the new point would change the joint distribution of the scores.</details>
+
+<details><summary>9. In the classification example, why is it acceptable that paragraph C got an empty set?</summary>
+The guarantee is marginal: empty sets count as misses, and the threshold \(\hat q\) was chosen so that misses of all kinds happen at most 10% of the time on average. Empty sets are rare when the model is reasonable, and they are informative: they flag unusual inputs.</details>
+
+<script>
+// ---------- Figure 1: split conformal on heteroscedastic regression ----------
+(function () {
+  const fTrue = x => 2 + 0.5 * x, fHat = x => 2.3 + 0.46 * x, sigma = x => 0.15 + 0.12 * x;
+  const draw1 = () => { const x = 10 * Math.random(); return { x, y: fTrue(x) + sigma(x) * randn() }; };
+  let cal = [], test = [];
+  const newData = () => { cal = Array.from({ length: 2000 }, draw1); test = Array.from({ length: 1000 }, draw1); };
+  newData();
+  const L = document.getElementById('d1L'), R = document.getElementById('d1R');
+  function draw() {
+    const a = +document.getElementById('d1a').value, n = +document.getElementById('d1n').value;
+    document.getElementById('d1av').textContent = a.toFixed(2);
+    const s = cal.slice(0, n).map(p => Math.abs(p.y - fHat(p.x)));
+    const k = ceil((1 - a) * (n + 1)), q = kth(s, k), qd = Math.min(q, 20);
+    // left panel
+    let P = frame(L, [0, 10], [-1, 11], { xt: [0, 2, 4, 6, 8, 10], yt: [0, 2, 4, 6, 8, 10], xl: 'note length x (pages)', yl: 'severity y' });
+    el('polygon', { points: `${P.X(0)},${P.Y(fHat(0) + qd)} ${P.X(10)},${P.Y(fHat(10) + qd)} ${P.X(10)},${P.Y(fHat(10) - qd)} ${P.X(0)},${P.Y(fHat(0) - qd)}`,
+                    fill: COL.band, opacity: 0.8 }, L);
+    const cov = [0, 0, 0], tot = [0, 0, 0];
+    test.forEach(p => {
+      const inside = Math.abs(p.y - fHat(p.x)) <= q, g = Math.min(2, Math.floor(p.x / (10 / 3)));
+      tot[g]++; if (inside) cov[g]++;
+      if (p.y > -1 && p.y < 11) el('circle', { cx: P.X(p.x), cy: P.Y(p.y), r: inside ? 2 : 2.6, fill: inside ? COL.blue : COL.orange, opacity: inside ? 0.55 : 0.9 }, L);
+    });
+    el('line', { x1: P.X(0), x2: P.X(10), y1: P.Y(fHat(0)), y2: P.Y(fHat(10)), stroke: COL.ink, 'stroke-width': 2 }, L);
+    // right panel: histogram of calibration scores as fractions
+    const w = 0.2, lo = 0, hi = 4.4, counts = new Array(Math.round((hi - lo) / w)).fill(0);
+    s.forEach(v => { const b = Math.floor(v / w); if (b < counts.length) counts[b]++; });
+    const ymax = Math.max(0.15, Math.max(...counts) / n * 1.1);
+    P = frame(R, [lo, hi], [0, ymax], { xt: [0, 1, 2, 3, 4], yt: [0, 0.1, 0.2, 0.3, 0.4, 0.5].filter(v => v <= ymax),
+      xl: 'calibration score |y − f̂(x)|', yl: 'fraction', margin: { l: 46 } });
+    hist(R, P, s, lo, hi, w, COL.gray, 1 / n);
+    if (q < hi) {
+      el('line', { x1: P.X(q), x2: P.X(q), y1: P.Y(0), y2: P.Y(ymax), stroke: COL.orange, 'stroke-width': 2.5 }, R);
+      label(R, P.X(q) + 5, P.Y(ymax) + 14, 'q̂ = ' + q.toFixed(2), {});
+    }
+    const pct = (c, t) => (100 * c / t).toFixed(1) + '%';
+    document.getElementById('d1read').innerHTML =
+      `k = ⌈(1 − ${a.toFixed(2)})·${n + 1}⌉ = ${k}, q̂ = ${isFinite(q) ? q.toFixed(2) : '∞'}. ` +
+      `<b>Test coverage ${pct(cov[0] + cov[1] + cov[2], 1000)}</b> (target ≥ ${(100 * (1 - a)).toFixed(0)}%). ` +
+      `Short notes (x &lt; 3.3): ${pct(cov[0], tot[0])} · medium: ${pct(cov[1], tot[1])} · long (x &gt; 6.7): ${pct(cov[2], tot[2])}.`;
+  }
+  document.getElementById('d1a').oninput = draw;
+  document.getElementById('d1n').onchange = draw;
+  document.getElementById('d1new').onclick = () => { newData(); draw(); };
+  draw();
+})();
+
+// ---------- Figure 2: coverage for a fixed calibration set is Beta(k, n+1-k) ----------
+(function () {
+  const svg = document.getElementById('d2'), a = 0.1;
+  const dists = {
+    exp:  { draw: () => -Math.log(1 - Math.random()), F: q => 1 - Math.exp(-q) },
+    abs:  { draw: () => Math.abs(randn()),            F: q => erf(q / Math.SQRT2) },
+    unif: { draw: () => Math.random(),                F: q => Math.min(1, q) },
+  };
+  function run() {
+    const n = +document.getElementById('d2n').value, D = dists[document.getElementById('d2d').value];
+    const k = ceil((1 - a) * (n + 1)), covs = [];
+    for (let r = 0; r < 2000; r++) {
+      const s = Array.from({ length: n }, D.draw);
+      covs.push(D.F(kth(s, k)));
+    }
+    const lo = 0.6, hi = 1.0, w = 0.01, counts = new Array(40).fill(0);
+    covs.forEach(c => { const b = Math.min(39, Math.floor((c - lo) / w)); if (b >= 0) counts[b]++; });
+    const ymax = Math.max(...counts) * 1.1;
+    const P = frame(svg, [lo, hi], [0, ymax], { xt: [0.6, 0.7, 0.8, 0.9, 1.0], yt: [], xl: 'coverage F(q̂) given the calibration set', yl: 'number of calibration sets' });
+    hist(svg, P, covs.map(c => Math.min(c, hi - 1e-9)), lo, hi, w, COL.blue);
+    el('line', { x1: P.X(0.9), x2: P.X(0.9), y1: P.Y(0), y2: P.Y(ymax), stroke: COL.ink, 'stroke-dasharray': '5 3' }, svg);
+    label(svg, P.X(0.9) - 5, P.Y(ymax) + 14, '1 − α = 0.9', { 'text-anchor': 'end' });
+    const tm = k / (n + 1), ts = Math.sqrt(k * (n + 1 - k) / ((n + 1) ** 2 * (n + 2)));
+    const below = covs.filter(c => c < 0.9).length / covs.length;
+    document.getElementById('d2read').textContent =
+      `k = ${k}. Simulated: mean ${mean(covs).toFixed(3)}, sd ${sd(covs).toFixed(3)}; ${(100 * below).toFixed(0)}% of calibration sets give coverage below 0.9. ` +
+      `Beta(${k}, ${n + 1 - k}) theory: mean ${tm.toFixed(3)}, sd ${ts.toFixed(3)}.`;
+  }
+  document.getElementById('d2run').onclick = run;
+  document.getElementById('d2n').onchange = run;
+  document.getElementById('d2d').onchange = run;
+  run();
+})();
+
+// ---------- Figure 3: label sets for three paragraphs ----------
+(function () {
+  const svg = document.getElementById('d3'), labs = ['Cred', 'Liq', 'Mkt', 'Op', 'Legal'];
+  const docs = { A: [0.70, 0.20, 0.05, 0.03, 0.02], B: [0.38, 0.33, 0.17, 0.07, 0.05], C: [0.24, 0.22, 0.20, 0.18, 0.16] };
+  function draw() {
+    const q = +document.getElementById('d3q').value, thr = 1 - q;
+    document.getElementById('d3qv').textContent = `${q.toFixed(2)} (include labels with p̂ ≥ ${thr.toFixed(2)})`;
+    svg.innerHTML = '';
+    const W = 200, H = 160, top = 20, base = top + H;
+    Object.entries(docs).forEach(([name, p], j) => {
+      const x0 = 30 + j * 215, Y = v => base - v * H / 0.8;
+      el('line', { x1: x0, x2: x0 + W, y1: base, y2: base, stroke: COL.ink2 }, svg);
+      const inSet = [];
+      p.forEach((v, i) => {
+        const on = v >= thr - 1e-9; if (on) inSet.push(labs[i]);
+        tip(el('rect', { x: x0 + 6 + i * 39, y: Y(v), width: 30, height: base - Y(v), fill: on ? COL.blue : COL.gray }, svg), `${labs[i]}: ${v}`);
+        label(svg, x0 + 21 + i * 39, base + 15, labs[i], { 'text-anchor': 'middle', style: 'font-size:11px' });
+        label(svg, x0 + 21 + i * 39, Y(v) - 3, v.toFixed(2), { 'text-anchor': 'middle', style: 'font-size:10px', fill: COL.ink2 });
+      });
+      if (thr <= 0.8) el('line', { x1: x0, x2: x0 + W, y1: Y(thr), y2: Y(thr), stroke: COL.orange, 'stroke-width': 2, 'stroke-dasharray': '6 3' }, svg);
+      label(svg, x0 + W / 2, top - 4, 'paragraph ' + name, { 'text-anchor': 'middle', style: 'font-weight:bold' });
+      label(svg, x0 + W / 2, base + 36, 'set: {' + inSet.join(', ') + '}', { 'text-anchor': 'middle' });
+    });
+  }
+  document.getElementById('d3q').oninput = draw;
+  draw();
+})();
+</script>
+</body>
+</html>

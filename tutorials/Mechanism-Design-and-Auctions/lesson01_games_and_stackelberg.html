@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 1: Games, Nash equilibrium and Stackelberg games</title>
+<script>
+  window.MathJax = { tex: { tags: 'ams' }, svg: { fontCache: 'global' } };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+  :root { --ink: #0b0b0b; --ink2: #52514e; --surface: #fcfcfb; --rule: #e4e3df;
+          --blue: #2a78d6; --orange: #eb6834; --box: #f3f2ee; }
+  body { font: 17px/1.6 Georgia, "Times New Roman", serif; color: var(--ink); background: var(--surface);
+         max-width: 820px; margin: 2rem auto; padding: 0 1.2rem; }
+  h1 { font-size: 1.9rem; margin-bottom: .2rem; }
+  h2 { margin-top: 2.6rem; border-bottom: 1px solid var(--rule); padding-bottom: .2rem; }
+  h3 { margin-top: 1.8rem; }
+  .meta { color: var(--ink2); }
+  .box { background: var(--box); border-left: 4px solid var(--ink2); padding: .6rem 1rem; margin: 1rem 0; }
+  .def { border-left-color: var(--blue); }
+  .intuition { border-left-color: var(--orange); }
+  .box > b:first-child { display: block; margin-bottom: .2rem; }
+  table { border-collapse: collapse; margin: 1rem auto; }
+  td, th { border: 1px solid var(--rule); padding: .35rem .8rem; text-align: center; }
+  th { background: var(--box); }
+  details { background: var(--box); padding: .5rem 1rem; margin: .6rem 0; }
+  summary { cursor: pointer; font-weight: bold; }
+  .toc a { text-decoration: none; }
+  figure { margin: 1.5rem 0; text-align: center; }
+  figcaption { color: var(--ink2); font-size: .92rem; }
+  svg text { font: 13px Georgia, serif; fill: var(--ink); }
+  code { font-size: .9em; }
+</style>
+</head>
+<body>
+
+<h1>Lesson 1: Games, Nash equilibrium and Stackelberg games</h1>
+<p class="meta">About 70 minutes. Part I (games) takes about 25 minutes and Part II (Stackelberg) about 45. A quiz at the end checks both.</p>
+
+<div class="box">
+<b>Why this lesson</b>
+The Stackelberg Regret paper is built on one idea: an advertiser who bids in many auctions can <em>commit</em> to a way of bidding, and the seller, who learns from bids, <em>reacts</em> to it. That is a Stackelberg game with the bidder as leader. To use it you need three things from this lesson: what an equilibrium is, what changes when one player moves first and commits, and how to compute the leader's best commitment.
+</div>
+
+<p class="toc"><b>Contents.</b>
+Part I: <a href="#g1">1.1 Games</a> · <a href="#g2">1.2 Best responses and dominance</a> · <a href="#g3">1.3 Nash equilibrium</a> · <a href="#g4">1.4 Mixed strategies</a> · <a href="#g5">1.5 Games in turns and credibility</a>.
+Part II: <a href="#s1">2.1 The Stackelberg game</a> · <a href="#s2">2.2 Commitment never hurts the leader</a> · <a href="#s3">2.3 A matrix example</a> · <a href="#s4">2.4 Computing the best commitment (LP)</a> · <a href="#s5">2.5 Cournot vs Stackelberg</a> · <a href="#s6">2.6 Optimizing against a reaction function</a> · <a href="#s7">2.7 Committing to a function</a> · <a href="#s8">2.8 The three Stackelberg games in auctions</a> · <a href="#sum">Summary</a> · <a href="#quiz">Quiz</a>.
+</p>
+
+<!-- ============================================================ -->
+<h2>Part I: Games</h2>
+
+<h3 id="g1">1.1 What a game is</h3>
+<div class="box def">
+<b>Definition (game in normal form).</b>
+A game has a set of players \(N=\{1,\dots,n\}\). Each player \(i\) has a set of strategies \(S_i\) and a payoff function \(u_i : S_1\times\cdots\times S_n \to \mathbb{R}\). A <em>strategy profile</em> is \(s=(s_1,\dots,s_n)\). We write \(s_{-i}\) for everyone's strategy except \(i\)'s, so \(u_i(s)=u_i(s_i,s_{-i})\).
+</div>
+<p>Each player cares about its own payoff but that payoff depends on what the others do. That interdependence is the whole subject.</p>
+
+<p><b>Our running auction example: the second-price auction as a game.</b> Bidder \(i\) has a private value \(v_i\) for one item. The strategies are bids \(b_i\ge 0\). The highest bid wins and pays the second-highest bid. With \(p_i=\max_{j\ne i} b_j\), the payoff is</p>
+\[
+u_i(b_i,b_{-i}) = \begin{cases} v_i - p_i & \text{if } b_i > p_i,\\ 0 & \text{if } b_i < p_i. \end{cases}
+\]
+<p>(Ties are broken by any fixed rule; they don't matter here.)</p>
+
+<h3 id="g2">1.2 Best responses and dominance</h3>
+<div class="box def">
+<b>Definition (best response).</b>
+Player \(i\)'s best responses to \(s_{-i}\) are \(\;\mathrm{BR}_i(s_{-i}) = \arg\max_{s_i\in S_i} u_i(s_i,s_{-i}).\)
+It is a <em>set</em>: there can be ties.
+</div>
+<div class="box def">
+<b>Definition (dominance).</b>
+\(s_i\) <em>weakly dominates</em> \(s_i'\) if \(u_i(s_i,s_{-i})\ge u_i(s_i',s_{-i})\) for every \(s_{-i}\), with strict inequality for some \(s_{-i}\). A strategy is <em>(weakly) dominant</em> if it is a best response to every \(s_{-i}\).
+</div>
+
+<p><b>Claim.</b> In the second-price auction, bidding your value, \(b_i=v_i\), is weakly dominant.</p>
+<p><b>Proof.</b> Fix the others' bids, so \(p_i\) is fixed. Any bid gives you one of two outcomes: you win and get \(v_i-p_i\), or you lose and get \(0\). The best you could hope for is \(\max(v_i-p_i,0)\). Bidding \(v_i\) gets exactly that: you win precisely when \(v_i>p_i\), i.e. when winning is worth it. So no bid does better, whatever the others do. \(\square\)</p>
+
+<div class="box intuition">
+<b>Intuition</b>
+Your bid only decides <em>whether</em> you win, never <em>what you pay</em> when you win. So you should win exactly when winning is profitable, and the bid that does that is your value. This "your bid doesn't set your price" structure is what VCG and MIR+VCG share. It is the meaning of DSIC (dominant-strategy incentive compatible): truth-telling is a dominant strategy. GSP lacks it: there, your bid moves your own price, so shading can pay.
+</div>
+
+<h3 id="g3">1.3 Nash equilibrium</h3>
+<p>Most games have no dominant strategies. Then we look for a profile where everyone is simultaneously doing the best they can, given the others.</p>
+<div class="box def">
+<b>Definition (Nash equilibrium).</b>
+A profile \(s^*\) is a Nash equilibrium if, for every player \(i\),
+\[
+s_i^*\in \mathrm{BR}_i(s_{-i}^*),\qquad\text{i.e.}\qquad u_i(s_i^*,s_{-i}^*)\ \ge\ u_i(s_i,s_{-i}^*)\quad \text{for all } s_i\in S_i .
+\]
+</div>
+<p>Three ways to read it:</p>
+<ul>
+<li><b>No regret:</b> nobody can gain by changing their own strategy alone (a "unilateral deviation").</li>
+<li><b>Fixed point:</b> define the joint best-response map \(\mathrm{BR}(s)=\prod_i \mathrm{BR}_i(s_{-i})\). A Nash equilibrium is a fixed point, \(s^*\in \mathrm{BR}(s^*)\).</li>
+<li><b>Self-enforcing agreement:</b> if everyone announced \(s^*\), nobody would want to break it.</li>
+</ul>
+<p>A Nash equilibrium says <em>where</em> play is stable, not <em>how</em> players get there. A natural "how" is <b>best-response dynamics</b>: players take turns switching to a best response. If it converges, the limit is a Nash equilibrium; but it can cycle forever. You have already seen this. The balanced-bidding runs in <code>NEK_GSP</code> are best-response dynamics for GSP, and the contexts that "never settle" (62% in the free regime) are exactly cycling dynamics.</p>
+
+<p><b>Example (a coordination failure).</b> Two players each choose Cooperate or Defect. Payoffs (row, column):</p>
+<table>
+<tr><th></th><th>C</th><th>D</th></tr>
+<tr><th>C</th><td>3, 3</td><td>0, 4</td></tr>
+<tr><th>D</th><td>4, 0</td><td>1, 1</td></tr>
+</table>
+<p>D strictly dominates C for both (4 &gt; 3 and 1 &gt; 0), so (D, D) is the unique Nash equilibrium, with payoffs (1, 1), although (C, C) gives (3, 3) to both. Equilibrium is about individual incentives, not about what is good for the group. (This is the Prisoner's Dilemma.)</p>
+
+<h3 id="g4">1.4 Mixed strategies</h3>
+<p>Some games have no equilibrium in pure strategies. In <em>Matching Pennies</em>, each player shows Heads or Tails; the row player wins 1 if they match, the column player wins 1 if they differ.</p>
+<table>
+<tr><th></th><th>H</th><th>T</th></tr>
+<tr><th>H</th><td>1, −1</td><td>−1, 1</td></tr>
+<tr><th>T</th><td>−1, 1</td><td>1, −1</td></tr>
+</table>
+<p>In every cell someone wants to switch. The fix is to allow randomizing.</p>
+<div class="box def">
+<b>Definition (mixed strategy).</b>
+A mixed strategy \(\sigma_i\) is a probability distribution over \(S_i\). Payoffs are expected payoffs, \(u_i(\sigma)=\mathbb{E}_{s\sim\sigma}[u_i(s)]\), with players randomizing independently.
+</div>
+<p><b>The indifference principle.</b> In a mixed equilibrium, every pure strategy a player uses with positive probability must give the same expected payoff (otherwise they would shift weight to the better one). Use it to solve Matching Pennies. Let the column player play H with probability \(q\). The row player's payoffs are</p>
+\[
+u_{\text{row}}(H) = q\cdot 1 + (1-q)(-1) = 2q-1, \qquad u_{\text{row}}(T) = q(-1) + (1-q)\cdot 1 = 1-2q .
+\]
+<p>For the row player to be willing to mix, \(2q-1=1-2q\), so \(q=1/2\). By the same argument the row player plays H with probability \(1/2\). The unique equilibrium is both players mixing 50/50.</p>
+<div class="box">
+<b>Theorem (Nash, 1950).</b> Every game with finitely many players and finitely many pure strategies has at least one Nash equilibrium in mixed strategies. (The proof applies Kakutani's fixed-point theorem to the best-response map.)
+</div>
+
+<h3 id="g5">1.5 Games in turns, backward induction and credibility</h3>
+<p>So far everyone moved at once. When players move in turns and see earlier moves, we draw a tree (the <em>extensive form</em>) and solve it from the end: <b>backward induction</b>.</p>
+<p><b>Entry game.</b> A potential entrant chooses Out or In. If In, the incumbent chooses Fight or Accommodate. Payoffs (entrant, incumbent): Out → (0, 2); In then Fight → (−1, −1); In then Accommodate → (1, 1).</p>
+<ul>
+<li><b>Backward induction:</b> if the entrant is In, the incumbent compares −1 (Fight) with 1 (Accommodate) and accommodates. Knowing that, the entrant compares 0 (Out) with 1 (In) and enters. Outcome: (In, Accommodate), payoffs (1, 1).</li>
+<li><b>But (Out, "Fight if In") is also a Nash equilibrium</b> of the whole game: given the threat, Out is optimal; given Out, the threat costs the incumbent nothing because it is never carried out.</li>
+<li>The threat is <b>not credible</b>: once the entrant is In, fighting hurts the incumbent. <em>Subgame-perfect equilibrium</em> rules such threats out by requiring a best response at every point of the tree, reached or not. Backward induction finds it.</li>
+</ul>
+<div class="box intuition">
+<b>Intuition</b>
+The incumbent would love to <em>commit</em> to fighting (it would get 2 instead of 1), but a promise it would break when the time comes is worthless. Commitment is valuable exactly when it changes what the other side expects, and it must be <em>credible</em>: observable and hard to reverse. That is the doorway to Stackelberg games.
+</div>
+
+<!-- ============================================================ -->
+<h2>Part II: Stackelberg games</h2>
+
+<h3 id="s1">2.1 The Stackelberg game</h3>
+<p>Heinrich von Stackelberg (1934) studied a market where one firm sets its output first and the other reacts. The general form:</p>
+<div class="box def">
+<b>Definition (Stackelberg game).</b>
+A <em>leader</em> chooses \(x\in X\) and commits to it. A <em>follower</em> observes \(x\) and chooses \(y\in Y\). Payoffs are \(u_L(x,y)\) and \(u_F(x,y)\). The follower plays a best response,
+\[
+y\in \mathrm{BR}_F(x) = \arg\max_{y'\in Y} u_F(x,y'),
+\]
+and the leader, anticipating this, solves the <b>bilevel problem</b>
+\[
+\max_{x\in X}\ u_L\big(x,\,y^*(x)\big)\qquad \text{subject to}\qquad y^*(x)\in \arg\max_{y'\in Y} u_F(x,y').
+\]
+A solution \((x^*, y^*(x^*))\) is a <b>Stackelberg equilibrium</b>.
+</div>
+<div class="box intuition">
+<b>In plain words: what "bilevel problem" means</b>
+<p>An ordinary optimization problem has <b>one</b> decision-maker: "choose \(x\) to make my payoff as large as possible." A <b>bilevel</b> problem is an optimization problem with <b>another optimization problem inside it</b>. "Level" just means layer:</p>
+<ul>
+<li><b>Outer level (the leader):</b> "Which \(x\) should I choose?"</li>
+<li><b>Inner level (the follower):</b> "Given the \(x\) I see, which \(y\) is best for <em>me</em>?"</li>
+</ul>
+<p>The leader cannot score a candidate \(x\) until it has worked out the follower's answer to that \(x\). So every time the leader considers an option, it first has to solve the follower's problem. That is what makes bilevel problems harder than ordinary ones.</p>
+<p><b>Example: a road toll.</b> A city chooses a toll for a highway (outer level) to raise as much money as possible. Each driver chooses the highway or the free side road to save their own time and money (inner level). If the toll is too high, everyone takes the side road and the city earns nothing. To judge any toll, the city must first predict how the drivers will react to it.</p>
+<p>In the dinner story, the outer level is you choosing a restaurant and the inner level is your friend choosing their best reply. In Cournot, the outer level is firm 1 choosing \(q_1\) and the inner level is firm 2 choosing \(q_2=R_2(q_1)\).</p>
+</div>
+<p><b>Ties matter.</b> When \(\mathrm{BR}_F(x)\) has several elements, we must say which one the follower picks.</p>
+<ul>
+<li><b>Strong Stackelberg equilibrium (SSE):</b> the follower breaks ties in the leader's favor. This is the standard choice. It is justified because the leader can usually perturb \(x\) slightly to make its preferred response strictly optimal, losing only an arbitrarily small amount.</li>
+<li><b>Weak Stackelberg equilibrium:</b> the follower breaks ties against the leader (a pessimistic leader). It may fail to exist because the supremum is not attained; we will see an example.</li>
+</ul>
+<div class="box intuition">
+<b>Intuition</b>
+In a simultaneous game, each player takes the other's <em>action</em> as given. In a Stackelberg game, the leader takes the follower's <em>reaction function</em> \(y^*(\cdot)\) as given. The leader chooses its favorite point on the follower's best-response curve. Moving first is a kind of power: you get to choose which follower behavior you face.
+</div>
+
+<h3 id="s2">2.2 Commitment never hurts the leader</h3>
+<div class="box">
+<b>Theorem (value of commitment).</b> In a finite two-player game, the leader's payoff in a strong Stackelberg equilibrium where it may commit to a <em>mixed</em> strategy is at least its payoff in <em>any</em> Nash equilibrium of the simultaneous game.
+</div>
+<p><b>Proof.</b> Take any Nash equilibrium \((\sigma_L^*,\sigma_F^*)\). Every pure action \(y\) that \(\sigma_F^*\) uses is a best response to \(\sigma_L^*\) (indifference principle), so \(\operatorname{supp}\sigma_F^*\subseteq \mathrm{BR}_F(\sigma_L^*)\). Now let the leader commit to \(\sigma_L^*\). Under strong tie-breaking, the follower picks the element of \(\mathrm{BR}_F(\sigma_L^*)\) that is best for the leader. That gives the leader
+\[
+\max_{y\in \mathrm{BR}_F(\sigma_L^*)} u_L(\sigma_L^*,y)\ \ \ge\ \sum_{y} \sigma_F^*(y)\,u_L(\sigma_L^*,y) \;=\; u_L(\sigma_L^*,\sigma_F^*),
+\]
+because a maximum is at least any average over a subset. The best commitment does at least as well as this particular one. \(\square\)</p>
+<p>Two remarks. (1) The follower can end up better or worse off than in Nash; nothing is promised to it. (2) The theorem compares <em>the same game with different timing</em>. Being able to commit is an advantage you have, not an obligation; at worst you commit to your Nash strategy.</p>
+
+<h3 id="s3">2.3 A matrix example: committing to a dominated strategy</h3>
+<p>Payoffs (leader = row, follower = column):</p>
+<table>
+<tr><th></th><th>L</th><th>R</th></tr>
+<tr><th>U</th><td>1, 1</td><td>3, 0</td></tr>
+<tr><th>D</th><td>0, 0</td><td>2, 1</td></tr>
+</table>
+<ul>
+<li><b>Simultaneous play.</b> U strictly dominates D for the row player (1 &gt; 0 and 3 &gt; 2). Against U, the follower prefers L (1 &gt; 0). The unique Nash equilibrium is (U, L): the leader gets <b>1</b>.</li>
+<li><b>Pure commitment.</b> Commit to D: the follower now prefers R (1 &gt; 0), and the leader gets <b>2</b>. Committing to a strictly dominated strategy doubles the leader's payoff, because it changes the follower's reply.</li>
+<li><b>Mixed commitment.</b> Commit to U with probability \(p\). The follower's payoffs are \(u_F(L)=p\) and \(u_F(R)=1-p\), so it plays R when \(p<1/2\) and L when \(p>1/2\). With R, the leader gets \(3p+2(1-p)=2+p\), which increases in \(p\). At \(p=1/2\) the follower is indifferent; under strong tie-breaking it plays R and the leader gets <b>2.5</b>.</li>
+<li><b>Weak tie-breaking.</b> At \(p=1/2\) the follower plays L, and the leader gets \(\tfrac12\cdot1+\tfrac12\cdot 0=0.5\). For \(p<1/2\) the leader gets \(2+p<2.5\). The supremum 2.5 is never attained: a weak Stackelberg equilibrium does not exist. The leader can get \(2.5-\varepsilon\) by playing \(p=1/2-\varepsilon\), which is why SSE is the standard notion.</li>
+</ul>
+<div class="box intuition">
+<b>Intuition</b>
+The leader mixes just enough of its "bad" action D to keep the follower on R, and plays its "good" action U as much as possible otherwise. Optimal commitments typically make the follower exactly indifferent. Keep this picture: the optimal bidder strategies in later lessons make the <em>seller</em> nearly indifferent in the same way.
+</div>
+
+<h3 id="s4">2.4 Computing the best commitment: one linear program per follower reply</h3>
+<div class="box">
+<b>Where this section goes</b>
+In 2.3 we found the best mixture by inspection. We want a recipe for any finite game. The obstacle is that the follower's reply <em>jumps</em> when the leader's mixture crosses a threshold, so the leader's payoff is discontinuous in its mixture. The trick: <b>first decide which reply you want to cause</b>. Inside the region where that reply is optimal, everything is linear, which makes it a linear program. Solve one per reply and keep the best.
+</div>
+<div class="box def">
+<b>Linear program (LP)</b>
+Maximize a linear function of some variables subject to linear inequalities. The feasible set is a polytope, an optimum is attained at a vertex, and LPs are solved in polynomial time (simplex, interior point; in Python <code>scipy.optimize.linprog</code>).
+</div>
+
+<h4>Step 1. The leader's payoff is discontinuous</h4>
+<p>In the game of 2.3, let \(p=\Pr(U)\). The follower's expected payoffs are \(u_F(L)=p\cdot1+(1-p)\cdot0=p\) and \(u_F(R)=p\cdot 0+(1-p)\cdot1=1-p\). It plays R when \(p\le\tfrac12\) (breaking the tie at \(\tfrac12\) in the leader's favor) and L otherwise. So</p>
+\[
+\Phi(p)=\begin{cases}3p+2(1-p)=2+p, & p\le \tfrac12\ \ (\text{follower plays R}),\\[2pt] p\cdot1+(1-p)\cdot0=p, & p>\tfrac12\ \ (\text{follower plays L}).\end{cases}
+\]
+<p>\(\Phi\) climbs to 2.5 and then drops to about 0.5 at \(p=\tfrac12\). Gradients are useless at the jump, and checking every \(p\) does not scale.</p>
+
+<h4>Step 2. Fix the reply you want, then optimize</h4>
+<p>Within "the follower plays R", the payoff is linear and the condition "R is a best reply" is a linear inequality:</p>
+\[
+\mathrm{LP}(R):\ \max_{0\le p\le1}\ 2+p\quad\text{s.t.}\quad \underbrace{1-p}_{u_F(R)}\ \ge\ \underbrace{p}_{u_F(L)}
+\ \ \Rightarrow\ \ p\le\tfrac12,\ \ \text{optimum } p=\tfrac12,\ \text{value } 2.5 .
+\]
+\[
+\mathrm{LP}(L):\ \max_{0\le p\le1}\ p\quad\text{s.t.}\quad p\ \ge\ 1-p
+\ \ \Rightarrow\ \ p\ge\tfrac12,\ \ \text{optimum } p=1,\ \text{value } 1 .
+\]
+<p>Keep the better one: commit to \(p=\tfrac12\), the follower plays R, and the leader gets 2.5, matching 2.3. The "\(\ge\)" admits the tie at \(p=\tfrac12\); that is exactly the strong tie-breaking of 2.1.</p>
+<details><summary>Optional: \(\mathrm{LP}(R)\) in Python</summary>
+<pre><code>from scipy.optimize import linprog
+# variables (pU, pD); linprog minimizes, so negate 3 pU + 2 pD
+# "R is a best reply":  u_F(L) - u_F(R) = pU - pD &lt;= 0
+res = linprog(c=[-3, -2], A_ub=[[1, -1]], b_ub=[0],
+              A_eq=[[1, 1]], b_eq=[1], bounds=[(0, 1), (0, 1)])
+print(res.x, -res.fun)   # [0.5 0.5] 2.5
+</code></pre></details>
+
+<h4>Step 3. The general recipe (Conitzer and Sandholm, 2006)</h4>
+<p>The leader mixes over \(X\) with probabilities \(p\in\Delta(X)\) (nonnegative, summing to 1). For each follower action \(y\in Y\):</p>
+\[
+\mathrm{LP}(y):\quad \max_{p\in\Delta(X)}\ \sum_x p_x\,u_L(x,y)\quad\text{s.t.}\quad \sum_x p_x\,u_F(x,y)\ \ge\ \sum_x p_x\,u_F(x,y')\ \ \ \forall y'\in Y .
+\]
+<p>Solve all \(|Y|\) LPs, drop the infeasible ones (no mixture makes that \(y\) a best reply), and keep the largest value. The result is the strong Stackelberg equilibrium, found in polynomial time. Computing a Nash equilibrium, by contrast, is PPAD-hard in general. The reason for the gap: in a Stackelberg game only the leader optimizes, while the follower is a fixed rule. Nash requires everyone to be optimal simultaneously, a fixed-point problem.</p>
+
+<h4>Step 4. Sequential moves: dynamic programming</h4>
+<p>When moves happen in sequence, the tool is <b>dynamic programming</b>: solve the last stage for every state, record its value, and step backward. Backward induction in 1.5 is exactly this. Its recursion is the Bellman equation \(V_t(s)=\max_a\big[r(s,a)+V_{t+1}(s')\big]\). A Stackelberg game is a two-stage instance: solve the follower's stage for every \(x\) (the reaction function of 2.6), then the leader's. The same recursion reappears for bidders with budgets over many auctions.</p>
+
+<h3 id="s5">2.5 The classic: Cournot vs Stackelberg duopoly</h3>
+<p>Two firms produce quantities \(q_1,q_2\ge 0\) of the same good. The price is \(P=a-Q\) with \(Q=q_1+q_2\), and each unit costs \(c\) to make, with \(a>c\). Firm \(i\)'s profit is</p>
+\[
+\pi_i(q_1,q_2)=(a-q_1-q_2-c)\,q_i .
+\]
+
+<p><b>Simultaneous moves (Cournot).</b> Firm \(i\) maximizes over \(q_i\) taking \(q_j\) as given. The first-order condition is \(\partial \pi_i/\partial q_i = a-c-2q_i-q_j=0\), so the reaction (best-response) function is</p>
+\[
+R_i(q_j)=\frac{a-c-q_j}{2}.
+\]
+<p>The Nash equilibrium solves \(q_1=R_1(q_2)\), \(q_2=R_2(q_1)\): \(\;q_1=q_2=\frac{a-c}{3}\), price margin \(P-c=\frac{a-c}{3}\), profits \(\pi_1=\pi_2=\frac{(a-c)^2}{9}\).</p>
+
+<p><b>Firm 1 leads (Stackelberg).</b> Firm 2 sees \(q_1\) and plays \(q_2=R_2(q_1)=\frac{a-c-q_1}{2}\). Firm 1 substitutes this into its own profit:</p>
+\[
+\pi_1\big(q_1,R_2(q_1)\big)=\Big(a-c-q_1-\frac{a-c-q_1}{2}\Big)q_1=\frac{(a-c-q_1)\,q_1}{2}.
+\]
+<p>This is maximized at \(q_1^S=\frac{a-c}{2}\). Then \(q_2^S=\frac{a-c}{4}\), total \(Q=\frac{3(a-c)}{4}\), margin \(P-c=\frac{a-c}{4}\).</p>
+
+<table>
+<tr><th></th><th>\(q_1\)</th><th>\(q_2\)</th><th>\(\pi_1\)</th><th>\(\pi_2\)</th><th>total \(Q\)</th></tr>
+<tr><th>Cournot (simultaneous)</th><td>\((a-c)/3\)</td><td>\((a-c)/3\)</td><td>\((a-c)^2/9\)</td><td>\((a-c)^2/9\)</td><td>\(2(a-c)/3\)</td></tr>
+<tr><th>Stackelberg (1 leads)</th><td>\((a-c)/2\)</td><td>\((a-c)/4\)</td><td>\((a-c)^2/8\)</td><td>\((a-c)^2/16\)</td><td>\(3(a-c)/4\)</td></tr>
+</table>
+<p>The leader earns more (\(1/8>1/9\)), the follower less (\(1/16<1/9\)), and buyers gain because more is produced at a lower price.</p>
+
+<figure>
+<svg id="cournot" viewBox="0 0 520 440" width="520" role="img" aria-label="Reaction curves and isoprofit curves for Cournot and Stackelberg"></svg>
+<figcaption>With \(a-c=1\). Solid lines are the reaction curves \(R_1\) (blue) and \(R_2\) (orange). Dashed blue curves are firm 1's isoprofit curves; lower curves mean more profit for firm 1, because firm 2 produces less. Cournot (N) is where the reaction curves cross, and firm 1's isoprofit there is flat. Stackelberg (S) is where firm 1's isoprofit just touches firm 2's reaction curve: the best point firm 1 can reach on that curve.</figcaption>
+</figure>
+
+<div class="box intuition">
+<b>Intuition</b>
+At the Cournot point, firm 1 is best-responding to a <em>fixed</em> \(q_2\). As leader, firm 1 knows \(q_2\) will fall by \(1/2\) for every unit it adds. Producing more therefore has an extra benefit (it pushes the rival back, which props up the price), so the leader expands output until that benefit is used up. The leader's isoprofit curve becomes tangent to the follower's reaction curve.
+</div>
+
+<p><b>Credibility again.</b> Once firm 2 has produced \(q_2=\frac{a-c}{4}\), firm 1's best response would be \(R_1\big(\frac{a-c}{4}\big)=\frac{3(a-c)}{8}<\frac{a-c}{2}\). If firm 1 could quietly revise, it would. The Stackelberg outcome needs the leader's move to be observable and irreversible (a built factory, a published auction rule, a long track record of bids). Keep this in mind: an advertiser's commitment is credible because the seller sees its bidding behavior repeated across millions of auctions.</p>
+
+<h3 id="s6">2.6 Solving the leader's problem: optimizing against a reaction function</h3>
+<div class="box">
+<b>Where this section goes</b>
+<p>The leader does not face a fixed move by the follower. It faces a <em>function</em>: the follower's reaction \(y^*(\cdot)\). Once we write the leader's payoff along that function, \(\Phi(x)=u_L\big(x,y^*(x)\big)\), the bilevel problem becomes an ordinary one-variable problem, and the only question left is <b>how much the leader knows about \(y^*\)</b>:</p>
+<ul>
+<li><b>Case A.</b> \(y^*\) is known in closed form: substitute it in and solve.</li>
+<li><b>Case B.</b> Only the follower's objective \(u_F\) is known: differentiate through the follower. This gives the hypergradient.</li>
+<li><b>Case C.</b> The follower is a black box: measure \(\Phi\) and estimate its slope. This is the case the Stackelberg Regret paper is in.</li>
+</ul>
+</div>
+
+<h4>Step 1. Turn the bilevel problem into a single-level one</h4>
+<p>The leader's problem from 2.1 is</p>
+\[
+\max_{x}\ u_L(x,y)\qquad\text{s.t.}\qquad y\in\arg\max_{y'} u_F(x,y').
+\]
+<p>The constraint is itself an optimization problem. Solve it once for <em>every</em> \(x\). The result is a function, the follower's <b>reaction function</b>:</p>
+\[
+y^*(x)=\arg\max_{y'}u_F(x,y')\qquad(\text{"if the leader plays } x\text{, the follower plays } y^*(x)\text{"}).
+\]
+<p>Now the constraint just says \(y=y^*(x)\). Substitute it in:</p>
+\[
+\boxed{\ \max_x\ \Phi(x),\qquad \Phi(x):=u_L\big(x,\,y^*(x)\big)\ }
+\]
+<p>\(\Phi\) is the leader's payoff <em>along the follower's reaction curve</em> (the orange line in the figure of 2.5). From here on, everything is about \(\Phi\).</p>
+<p><b>Cournot</b> (\(a-c=1\)): \(u_F(x,y)=(1-x-y)\,y\). It is concave in \(y\), so the first-order condition \(1-x-2y=0\) gives the maximum: \(y^*(x)=\frac{1-x}{2}\).</p>
+
+<h4>Case A. You know \(y^*\): substitute and solve</h4>
+\[
+\Phi(x)=\Big(1-x-\tfrac{1-x}{2}\Big)x=\tfrac{(1-x)\,x}{2},\qquad \Phi'(x)=\tfrac12-x=0\ \Rightarrow\ x=\tfrac12 .
+\]
+<p>That is all 2.5 did. The catch: you rarely have \(y^*\) in closed form, for example when \(y\) is the weights of a neural network.</p>
+
+<h4>Case B. You know \(u_F\) but not \(y^*\): differentiate through the follower</h4>
+<p>To climb \(\Phi\) we need \(\Phi'(x)\). Apply the chain rule to \(\Phi(x)=u_L(x,y^*(x))\):</p>
+\[
+\Phi'(x)=\underbrace{\partial_x u_L}_{\text{direct effect}}\;+\;\underbrace{\partial_y u_L\cdot y^{*\prime}(x)}_{\text{reaction effect}},\qquad\text{evaluated at } y=y^*(x).
+\]
+<p>The only unknown is \(y^{*\prime}(x)\), the derivative of a function we do not have. The trick is that we know one equation it satisfies <em>for every \(x\)</em>, the follower's first-order condition:</p>
+\[
+g(x):=\partial_y u_F\big(x,\,y^*(x)\big)=0\quad\text{for all } x .
+\]
+<p>A function that is zero everywhere has zero derivative. Differentiate \(g\) with the chain rule:</p>
+\[
+g'(x)=\partial^2_{yx}u_F+\partial^2_{yy}u_F\cdot y^{*\prime}(x)=0
+\quad\Longrightarrow\quad
+y^{*\prime}(x)=-\frac{\partial^2_{yx}u_F}{\partial^2_{yy}u_F}.
+\]
+<p>This is the <em>implicit function theorem</em>. It needs \(\partial^2_{yy}u_F\neq0\), meaning the follower's optimum is strict. With vectors it reads \(y^{*\prime}=-[\nabla^2_{yy}u_F]^{-1}\nabla^2_{yx}u_F\).</p>
+<p><b>Cournot check, without solving for \(y^*\):</b> \(\partial^2_{yy}u_F=-2\) and \(\partial^2_{yx}u_F=-1\), so \(y^{*\prime}=-\tfrac12\), the slope of \(R_2\). With \(u_L=(1-x-y)x\), we have \(\partial_x u_L=1-2x-y\) and \(\partial_y u_L=-x\), so</p>
+\[
+\Phi'(x)=\underbrace{(1-2x-y)}_{\text{direct}}+\underbrace{(-x)\big(-\tfrac12\big)}_{\text{reaction}}
+\ \overset{y=y^*(x)}{=}\ \tfrac12-x .
+\]
+<p>At \(x=0.3\) (so \(y^*=0.35\)): the direct effect is \(0.05\), the reaction effect is \(0.15\), and the total is \(0.20\). Most of the benefit of producing more comes from pushing the rival back.</p>
+
+<div class="box def">
+<b>Hypergradient</b>
+The slope of the outer objective <em>with the inner solution allowed to move</em>: \(\Phi'(x)=\frac{d}{dx}u_L\big(x,y^*(x)\big)\). Compare the ordinary partial derivative \(\partial_x u_L\), which freezes \(y\). Bilevel gradient ascent is \(x\leftarrow x+\eta\,\Phi'(x)\). The name comes from hyperparameter tuning: the outer variable is a hyperparameter, the inner problem is training, and the hypergradient counts the retraining a change causes.
+</div>
+
+<p><b>Nash vs Stackelberg in one term.</b> Suppose a leader climbs using only the direct term. It stops where \(1-2x-y=0\) with \(y=y^*(x)\), which is where \(R_1\) meets \(R_2\): the <b>Cournot</b> point \(x=\tfrac13\). With the full hypergradient it stops at \(x=\tfrac12\): <b>Stackelberg</b>. So Nash means optimizing <em>as if \(y\) were a constant</em>, and Stackelberg means optimizing <em>knowing \(y\) is a function of \(x\)</em>. The reaction term is the entire difference.</p>
+
+<h4>Case C. The follower is a black box: measure \(\Phi\), estimate its slope</h4>
+<p>Case B needs \(u_F\) and its second derivatives. If the follower is a training procedure, such as a seller that retrains a network on your bids, you have neither. What you <em>can</em> do is play \(x\), let the follower respond, and record your payoff \(\Phi(x)\). Two such queries give the slope:</p>
+\[
+\Phi'(x)\approx\frac{\Phi(x+h)-\Phi(x-h)}{2h}.
+\]
+<p>Cournot at \(x=0.3\), \(h=0.05\): \(\big(\Phi(0.35)-\Phi(0.25)\big)/0.1=(0.11375-0.09375)/0.1=0.20\). It is exact here because \(\Phi\) is quadratic. When \(x\in\mathbb{R}^d\) (for example the parameters of a bidding function), probe random directions \(\epsilon_k\sim N(0,I)\). This is <b>evolution strategies (ES)</b>:</p>
+\[
+\nabla\Phi(x)\approx\frac{1}{2\sigma N}\sum_{k=1}^{N}\big[\Phi(x+\sigma\epsilon_k)-\Phi(x-\sigma\epsilon_k)\big]\,\epsilon_k .
+\]
+
+<table>
+<tr><th>case</th><th>what the leader knows</th><th>how it gets \(\Phi'\)</th><th>price</th></tr>
+<tr><td>A</td><td>the formula for \(y^*(x)\)</td><td>differentiate \(\Phi\) directly</td><td>none</td></tr>
+<tr><td>B</td><td>a smooth \(u_F\)</td><td>chain rule + implicit function theorem (hypergradient)</td><td>second derivatives of \(u_F\)</td></tr>
+<tr><td>C</td><td>only the ability to query</td><td>finite differences / ES</td><td>one full follower response per query, and noise</td></tr>
+</table>
+<div class="box intuition">
+<b>Link to the paper</b>
+In the Stackelberg Regret paper the leader is a bidder and the follower is a seller that retrains a mechanism on bids: case C. Each query is a full retraining, and payoffs are noisy, hence ES with antithetic pairs \(\pm\epsilon_k\) and common random numbers (Lesson 6). The logic is unchanged: the bidder optimizes along the seller's reaction function. Only the way it obtains the slope differs.
+</div>
+
+<h3 id="s7">2.7 When the leader commits to a function</h3>
+<div class="box">
+<b>Where this section goes</b>
+<p>A bidder's bid changes every auction because its value does, so what it commits to is a <b>rule</b> \(\beta: v\mapsto b\). The seller never sees \(v\); it sees the distribution of bids. The structure is 2.6 with \(x\) replaced by \(\beta\), and the reaction function now maps a <em>bid distribution</em> to a mechanism.</p>
+<p>We solve a toy instance end to end and reach the punchline of the whole lesson: <b>against a seller that learns from bids, a little shading always pays, even when every individual auction is truthful</b>.</p>
+</div>
+
+<h4>Step 1. The problem</h4>
+<ul>
+<li>\(V\sim F\): the leader's private value.</li>
+<li>\(\beta\): the leader's bidding rule. This is its decision variable, and it is a function.</li>
+<li>\(D_\beta\): the distribution of \(\beta(V)\) (the push-forward \(\beta_\#F\)). This is all the seller sees.</li>
+<li>\(\mathcal{A}\): the seller's learning procedure, which maps a bid distribution to a mechanism. It is the reaction function.</li>
+</ul>
+\[
+\max_{\beta}\ \Phi(\beta):=\mathbb{E}_{V\sim F}\Big[\,u\big(V,\ \beta(V);\ \mathcal{A}(D_\beta)\big)\Big].
+\]
+<p>Line it up with 2.6: \(x\to\beta\) and \(y^*(x)\to\mathcal{A}(D_\beta)\). One new feature: the follower reacts to the <em>distribution</em> of bids, never to an individual value.</p>
+
+<h4>Step 2. A toy instance</h4>
+<p>\(V\sim U[0,1]\). The seller posts the revenue-maximizing price for the bids it has seen: \(\mathcal{A}(D)=\arg\max_p\ p\cdot\Pr_{B\sim D}(B\ge p)\). Facing a posted price \(p\), the buyer buys if and only if \(V\ge p\), so its utility is \((V-p)^+\). Restrict the leader to linear shading, \(\beta_\alpha(v)=\alpha v\) with \(\alpha\in(0,1]\), where \(\alpha=1\) is truthful. The decision is one number again, so the tools of 2.6 apply directly. For now, the bids the seller learns from cost the buyer nothing; Step 5 removes that.</p>
+
+<h4>Step 3. The follower's reaction function \(p^*(\alpha)\)</h4>
+<p>With \(D_{\beta_\alpha}=U[0,\alpha]\), we have \(\Pr(B\ge p)=1-p/\alpha\) for \(p\le\alpha\). The seller solves</p>
+\[
+\max_p\ p\Big(1-\frac{p}{\alpha}\Big):\qquad 1-\frac{2p}{\alpha}=0\ \Rightarrow\ p^*(\alpha)=\frac{\alpha}{2},\qquad \frac{dp^*}{d\alpha}=\frac12 .
+\]
+<p>Shading makes the buyer look poorer, and the seller answers with a lower price.</p>
+
+<h4>Step 4. The leader's payoff along the reaction</h4>
+\[
+\Phi(\alpha)=\mathbb{E}\big[(V-p^*(\alpha))^+\big]=\int_{\alpha/2}^{1}\Big(v-\frac\alpha2\Big)dv=\frac12\Big(1-\frac\alpha2\Big)^2 .
+\]
+<p>Split \(\Phi'\) as in 2.6:</p>
+<ul>
+<li><b>Direct effect: 0.</b> The bid does not enter the posted-price payoff.</li>
+<li><b>Reaction effect:</b> \(\frac{\partial u}{\partial p}\cdot\frac{dp^*}{d\alpha}=-\Pr(V\ge p^*)\cdot\frac12=-\frac12\big(1-\frac\alpha2\big)\).</li>
+</ul>
+<p>So \(\Phi'(\alpha)<0\) everywhere: every bit of shading helps (\(\Phi=0.125\) at \(\alpha=1\), \(0.281\) at \(\alpha=0.5\), and toward \(0.5\) as \(\alpha\to0\)), and <em>all</em> of the gain comes through the seller's reaction. The answer "shade to zero" is degenerate because the data were free.</p>
+
+<h4>Step 5. Make the data costly</h4>
+<p>In reality the bids the seller learns from are placed in auctions the buyer cares about. Model this as a <b>data phase</b> of \(w\) rounds for every round of the <b>exploitation phase</b> above. In the data phase the seller runs a truthful mechanism: draw a random price \(R\sim U[0,1]\); the buyer buys at \(R\) if its bid is at least \(R\). This is DSIC for the same reason second price is: the bid decides <em>whether</em> you buy, never <em>at what price</em>.</p>
+<p>Data-phase utility of a buyer with value \(v\) who bids \(\alpha v\):</p>
+\[
+\int_0^{\alpha v}(v-r)\,dr=v^2\Big(\alpha-\frac{\alpha^2}{2}\Big),\qquad
+\mathbb{E}_V[\cdot]=\frac13\Big(\alpha-\frac{\alpha^2}{2}\Big),\qquad
+\frac{d}{d\alpha}\,\frac13\Big(\alpha-\frac{\alpha^2}{2}\Big)=\frac{1-\alpha}{3}.
+\]
+<p>The derivative is 0 at \(\alpha=1\): truth maximizes data-phase utility, as DSIC promises. The total objective is</p>
+\[
+U_w(\alpha)=\underbrace{\frac{w}{3}\Big(\alpha-\frac{\alpha^2}{2}\Big)}_{\text{data phase}}+\underbrace{\frac12\Big(1-\frac\alpha2\Big)^2}_{\text{exploitation phase}} .
+\]
+
+<h4>Step 6. The key computation: the slope at truth</h4>
+\[
+U_w'(1)=\underbrace{w\cdot 0}_{\text{data phase}}\;\underbrace{-\;\frac12\cdot\frac12}_{\text{reaction}}=-\frac14<0\qquad\text{for every } w .
+\]
+<p>Truthful bidding is <b>never</b> optimal against this seller, however long the data phase is. The reason is visible in the formula:</p>
+<ul>
+<li>DSIC means truth maximizes data-phase utility, so that utility has zero slope at truth. Shading by \(\varepsilon\) costs only about \(\varepsilon^2\) (here exactly \(w\varepsilon^2/6\)).</li>
+<li>The seller's price moves by \(\varepsilon/2\), so the exploitation-phase gain is about \(\varepsilon\).</li>
+<li>A first-order gain beats a second-order cost.</li>
+</ul>
+<p>The optimal shading solves \(U_w'(\alpha)=0\), that is \(\frac{w(1-\alpha)}{3}=\frac12\big(1-\frac\alpha2\big)\):</p>
+\[
+\alpha^*(w)=\frac{4w-6}{4w-3}=1-\frac{3}{4w-3}\quad(w\ge\tfrac32;\ \text{otherwise } \alpha^*=0).
+\]
+<table>
+<tr><th>\(w\) (data rounds per exploitation round)</th><td>2</td><td>3</td><td>6</td><td>30</td></tr>
+<tr><th>\(\alpha^*\) (fraction of value bid)</th><td>0.40</td><td>0.67</td><td>0.86</td><td>0.97</td></tr>
+</table>
+<p>A longer data phase means less shading, but the shading never reaches zero.</p>
+<div class="box intuition">
+<b>The punchline</b>
+DSIC makes a small lie cost almost nothing, because the cost is second-order. A seller that learns from bids makes the same lie pay at first order, as long as its reaction actually moves with your bids (\(dp^*/d\alpha\neq0\)). That asymmetry is why mechanisms that are truthful auction by auction can still be exploited by a bidder who leads.
+</div>
+
+<h3 id="s8">2.8 The three auction Stackelberg games, and measuring the leader's gain</h3>
+<table>
+<tr><th></th><th>Leader commits to</th><th>Follower responds with</th><th>Where it appears</th></tr>
+<tr><td><b>A. Classical mechanism design</b></td><td>seller: a mechanism (allocation and payment rules)</td><td>bidders: bids</td><td>Myerson, VCG, MIRT, GSP at equilibrium (Lessons 2–4)</td></tr>
+<tr><td><b>B. Learning seller, one bidder leads</b></td><td>one bidder: a bidding rule \(\beta\)</td><td>seller: \(\mathcal{A}(D_\beta)\), retrained on the bids</td><td>Nedelec et al. 2019–2022; the Stackelberg Regret audit; the toy of 2.7 (Lesson 5)</td></tr>
+<tr><td><b>C. Everyone leads</b></td><td>every bidder: a bidding rule</td><td>seller: retrains on the joint bid distribution</td><td>symmetric equilibrium (Lesson 6)</td></tr>
+</table>
+<p>Two numbers measure how much a bidder gains by deviating from truth (\(\mathrm{id}\)). Here \(U(\beta;M)\) is the bidder's expected utility when it bids with \(\beta\) against mechanism \(M\).</p>
+\[
+R_{\text{stat}}=\sup_{\beta}\frac{\mathbb{E}\,U\big(\beta;\ \mathcal{A}(D_{\mathrm{id}})\big)}{\mathbb{E}\,U\big(\mathrm{id};\ \mathcal{A}(D_{\mathrm{id}})\big)}-1,
+\qquad
+R_{\text{Stack}}=\sup_{\beta}\frac{\mathbb{E}\,U\big(\beta;\ \mathcal{A}(D_{\beta})\big)}{\mathbb{E}\,U\big(\mathrm{id};\ \mathcal{A}(D_{\mathrm{id}})\big)}-1 .
+\]
+<p>The only difference is the mechanism in the numerator. \(R_{\text{stat}}\) holds the mechanism <em>frozen</em> (game A), while \(R_{\text{Stack}}\) lets the seller <em>retrain</em> on the deviating bids (game B).</p>
+<p><b>Both on the toy</b>, with \(w=3\) and utility summed over both phases:</p>
+<ul>
+<li><b>Frozen:</b> the data phase is DSIC and the exploitation price stays at \(\tfrac12\) whatever you bid, so truth is optimal and \(R_{\text{stat}}=0\).</li>
+<li><b>Retrained:</b> \(U_3(1)=\tfrac36+\tfrac18=0.625\) and \(U_3(\tfrac23)=\tfrac49+\tfrac29=0.667\), so \(R_{\text{Stack}}=0.667/0.625-1\approx\mathbf{6.7\%}\). With \(w=2\) it is 16%.</li>
+</ul>
+<p>DSIC is a statement about game A (\(R_{\text{stat}}=0\)) and says nothing about game B. The Stackelberg Regret paper audits learned mechanisms by estimating \(R_{\text{Stack}}\) with ES, which is case C of 2.6.</p>
+
+<!-- ============================================================ -->
+<h2 id="sum">Summary</h2>
+<ul>
+<li>A <b>best response</b> maximizes your payoff given the others. A <b>dominant strategy</b> is a best response to everything. In second-price auctions and VCG, truth-telling is dominant (DSIC).</li>
+<li>A <b>Nash equilibrium</b> is a fixed point of best responses: no profitable unilateral deviation. Mixed equilibria always exist in finite games, and mixing players are indifferent among the actions they use.</li>
+<li>In games played in turns, <b>backward induction</b> removes non-credible threats (subgame perfection).</li>
+<li>In a <b>Stackelberg game</b> the leader commits and the follower best-responds. Solving the follower's problem for every \(x\) gives the <b>reaction function</b> \(y^*(x)\), and the bilevel problem becomes \(\max_x \Phi(x)=u_L(x,y^*(x))\). Use strong tie-breaking (SSE).</li>
+<li><b>Commitment never hurts the leader</b> compared with Nash. It can make committing to a dominated action, or to a carefully chosen mixture, optimal. In finite games, the best commitment is a set of linear programs.</li>
+<li>\(\Phi'(x)=\partial_x u_L+\partial_y u_L\cdot y^{*\prime}(x)\) is the <b>hypergradient</b>: a direct effect plus a reaction effect. Dropping the reaction term gives Nash (Cournot \(x=\tfrac13\)); keeping it gives Stackelberg (\(x=\tfrac12\)).</li>
+<li>There are three ways to get \(\Phi'\): substitute a known \(y^*\); use the implicit function theorem when \(u_F\) is known, \(y^{*\prime}=-\partial^2_{yx}u_F/\partial^2_{yy}u_F\); or query a black box with finite differences or ES. Auctions with a retraining seller are the third case.</li>
+<li>A bidder commits to a <b>function</b> \(\beta\). The seller sees only \(D_\beta\) and reacts with \(\mathcal{A}(D_\beta)\).</li>
+<li>DSIC makes the cost of shading second-order at truth; a learning seller makes the gain first-order. So truth is never optimal against a learning seller: \(R_{\text{stat}}=0\) but \(R_{\text{Stack}}>0\).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="quiz">Quiz</h2>
+<p>Try each one on paper before opening the answer.</p>
+
+<details><summary>Q1. In a first-price auction (highest bid wins and pays its own bid), is bidding your value dominant? What is your utility if you do?</summary>
+<p>No. If you bid your value you pay your value whenever you win, so your utility is always 0. Any bid slightly below your value gives positive utility in the cases where it still wins. First-price auctions are not DSIC, so bidders shade. (Contrast with the proof in 1.2: here your bid <em>does</em> set your price.)</p>
+</details>
+
+<details><summary>Q2. Find all Nash equilibria (pure and mixed) of this game: rows T, B; columns L, R; payoffs (T,L) = (2,1), (T,R) = (0,0), (B,L) = (0,0), (B,R) = (1,2).</summary>
+<p>Pure: (T, L) and (B, R). Mixed: let the row player play T with probability \(p\). The column player is indifferent when \(1\cdot p = 2(1-p)\), so \(p=2/3\). Let the column player play L with probability \(q\). The row player is indifferent when \(2q = 1\cdot(1-q)\), so \(q=1/3\). The mixed equilibrium is \((p,q)=(2/3,1/3)\), with expected payoffs \((2/3,\,2/3)\).</p>
+</details>
+
+<details><summary>Q3. In the game of Q2, suppose the row player leads and can commit to a mixed strategy. What is its strong Stackelberg payoff, and how does it compare with its Nash payoffs?</summary>
+<p>Committing to pure T makes L the follower's strict best response (1 &gt; 0), giving the leader 2. No commitment can give more, because 2 is the leader's largest payoff in the matrix. So the Stackelberg payoff is 2. It equals its best Nash payoff (T, L) and beats the others (1 in (B, R), 2/3 in the mixed one). Commitment lets the leader <em>select</em> its favorite equilibrium.</p>
+</details>
+
+<details><summary>Q4. In the matrix example of 2.3, why does the leader not commit to U with probability 0.6?</summary>
+<p>At \(p=0.6>1/2\), the follower's payoff from L (0.6) beats R (0.4), so it plays L and the leader gets \(0.6\cdot 1+0.4\cdot 0=0.6\). Crossing \(p=1/2\) switches the follower's reply from R to L and the leader's payoff falls from about 2.5 to about 0.5. The optimum sits right at the switching point, on the side where the follower plays R.</p>
+</details>
+
+<details><summary>Q5. Redo Cournot vs Stackelberg with costs \(c_1=c_2=0\) and demand \(P=12-Q\). Give quantities and profits in both cases.</summary>
+<p>\(a-c=12\). Cournot: \(q_1=q_2=4\), price 4, profits 16 each. Stackelberg with firm 1 leading: \(q_1=6\), \(q_2=3\), price 3, profits 18 and 9. Check: \(12^2/9=16\), \(12^2/8=18\), \(12^2/16=9\).</p>
+</details>
+
+<details><summary>Q6. In 2.6, what would the reaction term be if the follower ignored the leader, i.e. \(y^{*\prime}(x)=0\)? What does that say about when moving first matters?</summary>
+<p>The reaction term \(\partial_y u_L\cdot y^{*\prime}\) would vanish, and the leader's condition would be its Nash condition. Moving first helps only when the follower's reply actually depends on the leader's move. In auctions, a bidder gains from leading only if the learned mechanism depends on that bidder's bids. Keep this in mind for MIRT: if a single bidder's bids barely move the range, that bidder has little to gain by leading.</p>
+</details>
+
+<details><summary>Q7. In the costed toy of 2.7, \(\alpha^*(w)\to1\) as \(w\to\infty\) but never equals 1. Explain why with the two orders of magnitude, and find the rate.</summary>
+<p>Shading to \(\alpha=1-\varepsilon\) costs \(w\varepsilon^2/6\) in the data phase (second order, scaled by \(w\)) and gains about \(\varepsilon/4\) in the exploitation phase (first order, independent of \(w\)). Balancing the marginal cost \(w\varepsilon/3\) against the marginal gain \(\approx1/4\) gives \(\varepsilon\approx\frac{3}{4w}\). Exactly: \(1-\alpha^*=\frac{3}{4w-3}\). The shading shrinks like \(1/w\) but stays positive.</p>
+</details>
+
+<details><summary>Q8. Why is a DSIC mechanism not automatically safe against a bidder who leads? Use \(R_{\text{stat}}\) and \(R_{\text{Stack}}\).</summary>
+<p>DSIC means \(R_{\text{stat}}=0\): against a <em>frozen</em> mechanism, truth is optimal. When the seller retrains on bids, the bidder's rule also changes the mechanism it faces, and \(R_{\text{Stack}}\) can be positive. The toy has \(R_{\text{stat}}=0\) and \(R_{\text{Stack}}\approx6.7\%\). In the paper, CGA-optimal and affine maximizers have internal regret exactly 0 and are still exploited by 40–95%.</p>
+</details>
+
+<details><summary>Q9. In the free-data toy (Step 4 of 2.7), the buyer may use any bidding function, not only linear ones. What is the best possible utility, and what does it say about the model?</summary>
+<p>The supremum is \(\tfrac12=\mathbb{E}[V]\), approached by making the observed bids so low that the posted price goes to 0. The free-data model is too generous to the leader, which is why Step 5 adds a costly data phase.</p>
+</details>
+
+<script>
+// Cournot vs Stackelberg diagram, a - c = 1.
+(function () {
+  const svg = document.getElementById('cournot');
+  const NS = 'http://www.w3.org/2000/svg';
+  const L = 60, T = 20, W = 420, H = 360, X1 = 1.0, Y1 = 0.8;   // plot box and data ranges
+  const px = q => L + q / X1 * W, py = q => T + H - q / Y1 * H;
+  const el = (tag, attrs, text) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    svg.appendChild(e); return e;
+  };
+  const path = (f, a, b, attrs) => {
+    let d = '';
+    for (let i = 0; i <= 200; i++) {
+      const q1 = a + (b - a) * i / 200, q2 = f(q1);
+      if (q2 < 0 || q2 > Y1) continue;
+      d += (d ? 'L' : 'M') + px(q1).toFixed(1) + ',' + py(q2).toFixed(1);
+    }
+    el('path', Object.assign({ d, fill: 'none' }, attrs));
+  };
+  // axes and light grid
+  for (let g = 0.2; g <= X1 + 1e-9; g += 0.2) {
+    el('line', { x1: px(g), x2: px(g), y1: T, y2: T + H, stroke: '#e4e3df' });
+    el('text', { x: px(g), y: T + H + 18, 'text-anchor': 'middle' }, g.toFixed(1));
+  }
+  for (let g = 0.2; g <= Y1 + 1e-9; g += 0.2) {
+    el('line', { x1: L, x2: L + W, y1: py(g), y2: py(g), stroke: '#e4e3df' });
+    el('text', { x: L - 8, y: py(g) + 4, 'text-anchor': 'end' }, g.toFixed(1));
+  }
+  el('line', { x1: L, x2: L + W, y1: T + H, y2: T + H, stroke: '#52514e' });
+  el('line', { x1: L, x2: L, y1: T, y2: T + H, stroke: '#52514e' });
+  el('text', { x: L + W / 2, y: T + H + 38, 'text-anchor': 'middle' }, 'q₁ (leader / firm 1)');
+  el('text', { x: 16, y: T + H / 2, 'text-anchor': 'middle', transform: `rotate(-90 16 ${T + H / 2})` }, 'q₂ (follower / firm 2)');
+  // isoprofit curves of firm 1: (1 - q1 - q2) q1 = k
+  path(q1 => 1 - q1 - 1 / (9 * q1), 0.12, 0.9, { stroke: '#2a78d6', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' });
+  path(q1 => 1 - q1 - 1 / (8 * q1), 0.12, 0.9, { stroke: '#2a78d6', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' });
+  // reaction curves
+  path(q1 => 1 - 2 * q1, 0.1, 0.5, { stroke: '#2a78d6', 'stroke-width': 2 });       // R1: q1 = (1 - q2)/2
+  path(q1 => (1 - q1) / 2, 0, 1, { stroke: '#eb6834', 'stroke-width': 2 });           // R2: q2 = (1 - q1)/2
+  el('text', { x: px(0.17), y: py(0.75) }, 'R₁: q₁ = (1 − q₂)/2');
+  el('text', { x: px(0.72), y: py(0.16) }, 'R₂: q₂ = (1 − q₁)/2');
+  el('text', { x: px(0.20), y: py(0.27), fill: '#52514e' }, 'π₁ = 1/9');
+  el('text', { x: px(0.20), y: py(0.13), fill: '#52514e' }, 'π₁ = 1/8');
+  // equilibrium points, each with a hover title and a surface ring
+  const point = (q1, q2, label, tip, dx, dy) => {
+    const c = el('circle', { cx: px(q1), cy: py(q2), r: 6, fill: '#0b0b0b', stroke: '#fcfcfb', 'stroke-width': 2 });
+    el('title', {}, tip); c.appendChild(svg.lastChild);
+    el('text', { x: px(q1) + dx, y: py(q2) + dy, 'font-weight': 'bold' }, label);
+  };
+  point(1 / 3, 1 / 3, 'N (Cournot)', 'Cournot: q1 = q2 = 1/3, profits 1/9 each', 10, -8);
+  point(1 / 2, 1 / 4, 'S (Stackelberg)', 'Stackelberg: q1 = 1/2, q2 = 1/4, profits 1/8 and 1/16', 10, 18);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutorials</title>
+<style>
+  body {
+    max-width: 680px;
+    margin: 50px auto;
+    padding: 0 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    color: #222;
+    line-height: 1.7;
+  }
+  .topic { font-weight: 600; margin-top: 24px; }
+  .item { padding-left: 20px; }
+  a { color: #1a5fb4; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div id="topics"></div>
+
+<div class="topic">Other</div>
+<div class="item">– <a href="/reasoning_alts">Reasoning Directions Atlas</a></div>
+
+<script>
+async function loadTutorials() {
+  const api = "https://api.github.com/repos/aliielahi/aliielahi.github.io/contents/tutorials";
+  const container = document.getElementById("topics");
+  const prettyName = name => name.replace(/\.html$/, "").replace(/[-_]/g, " ");
+  try {
+    const folders = (await (await fetch(api)).json()).filter(item => item.type === "dir");
+    folders.sort((a, b) => a.name.localeCompare(b.name));
+    let html = "";
+    for (const folder of folders) {
+      const files = (await (await fetch(api + "/" + encodeURIComponent(folder.name))).json())
+        .filter(item => item.name.endsWith(".html"))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      html += '<div class="topic">' + prettyName(folder.name) + "</div>";
+      for (const file of files) {
+        html += '<div class="item">– <a href="/' + file.path.split("/").map(encodeURIComponent).join("/") + '">' + prettyName(file.name) + "</a></div>";
+      }
+    }
+    container.innerHTML = html;
+  } catch (error) {
+    container.innerHTML = "<div>Couldn't load the list right now. Try refreshing.</div>";
+  }
+}
+loadTutorials();
+</script>
+
+</body>
+</html>
